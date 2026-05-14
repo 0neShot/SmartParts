@@ -1,0 +1,294 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block page_title %}{% trans "Smart Parts" %} | {{ block.super }}{% endblock %}
+
+{% block content %}
+<input type="hidden" id="sp-csrf" value="{{ csrf_token }}">
+<style>
+/* ── Smart Parts – Dashboard & Live-Editor Styles ─────────────── */
+:root{
+  --sp-primary:#6366f1;--sp-primary-hover:#4f46e5;--sp-success:#10b981;
+  --sp-warning:#f59e0b;--sp-danger:#ef4444;--sp-info:#3b82f6;
+  --sp-bg-card:#ffffff;--sp-text-muted:#6b7280;--sp-border:#e5e7eb;
+  --sp-gradient:linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#a78bfa 100%);
+  --sp-shadow:0 4px 6px -1px rgba(0,0,0,.1),0 2px 4px -2px rgba(0,0,0,.1);
+  --sp-shadow-lg:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -4px rgba(0,0,0,.1);
+}
+/* Layout */
+.sp-wrap{max-width:1400px;margin:0 auto;padding:1.5rem}
+.sp-header{background:var(--sp-gradient);border-radius:16px;padding:2rem 2.5rem;margin-bottom:2rem;color:#fff;box-shadow:var(--sp-shadow-lg)}
+.sp-header h1{font-size:1.75rem;font-weight:700;margin:0 0 .25rem}
+.sp-header p{margin:0;opacity:.85;font-size:.95rem}
+.sp-card{background:var(--sp-bg-card);border:1px solid var(--sp-border);border-radius:12px;box-shadow:var(--sp-shadow);padding:1.5rem;margin-bottom:1.5rem;transition:box-shadow .2s}
+.sp-card:hover{box-shadow:var(--sp-shadow-lg)}
+.sp-card h3{font-size:1.1rem;font-weight:600;margin:0 0 1rem;display:flex;align-items:center;gap:.5rem}
+.sp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.5rem;margin-bottom:1.5rem}
+/* Search */
+.sp-search-box{position:relative}
+.sp-search-box input{width:100%;padding:.875rem 1.25rem .875rem 3rem;border:2px solid var(--sp-border);border-radius:12px;font-size:1.05rem;transition:border-color .2s,box-shadow .2s;outline:none;box-sizing:border-box}
+.sp-search-box input:focus{border-color:var(--sp-primary);box-shadow:0 0 0 3px rgba(99,102,241,.15)}
+.sp-search-box .sp-search-icon{position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--sp-text-muted)}
+/* Buttons */
+.sp-btn{display:inline-flex;align-items:center;gap:.5rem;padding:.625rem 1.25rem;border:none;border-radius:8px;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .2s;text-decoration:none}
+.sp-btn-primary{background:var(--sp-primary);color:#fff}
+.sp-btn-primary:hover{background:var(--sp-primary-hover);transform:translateY(-1px);box-shadow:var(--sp-shadow)}
+.sp-btn-success{background:var(--sp-success);color:#fff}
+.sp-btn-success:hover{background:#059669;transform:translateY(-1px);box-shadow:var(--sp-shadow)}
+.sp-btn-outline{background:transparent;color:var(--sp-primary);border:2px solid var(--sp-primary)}
+.sp-btn-outline:hover{background:var(--sp-primary);color:#fff}
+.sp-btn-sm{padding:.35rem .75rem;font-size:.8rem}
+.sp-btn-danger{background:transparent;color:var(--sp-danger);border:1px solid var(--sp-danger)}
+.sp-btn-danger:hover{background:var(--sp-danger);color:#fff}
+/* Status */
+.sp-status-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.sp-status-dot.active{background:var(--sp-success)}
+.sp-status-dot.inactive{background:var(--sp-text-muted)}
+/* Nav cards */
+.sp-nav-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem}
+.sp-nav-card{display:flex;flex-direction:column;align-items:center;gap:.75rem;padding:1.5rem 1rem;border-radius:12px;text-decoration:none;color:inherit;border:2px solid var(--sp-border);transition:all .25s}
+.sp-nav-card:hover{border-color:var(--sp-primary);background:rgba(99,102,241,.04);transform:translateY(-2px);box-shadow:var(--sp-shadow)}
+.sp-nav-card .sp-nav-icon{font-size:1.75rem;color:var(--sp-primary)}
+.sp-nav-card .sp-nav-label{font-weight:600;font-size:.95rem}
+.sp-nav-card .sp-nav-desc{font-size:.8rem;color:var(--sp-text-muted);text-align:center}
+/* Logs */
+.sp-log-item{padding:.5rem 0;border-bottom:1px solid var(--sp-border);font-size:.85rem;display:flex;gap:.75rem}
+.sp-log-item:last-child{border-bottom:none}
+.sp-log-time{color:var(--sp-text-muted);white-space:nowrap;min-width:70px}
+/* Badges */
+.sp-badge{padding:.15rem .5rem;border-radius:4px;font-size:.75rem;font-weight:600}
+.sp-badge-info{background:rgba(59,130,246,.1);color:var(--sp-info)}
+.sp-badge-warn{background:rgba(245,158,11,.15);color:#b45309}
+.sp-badge-error{background:rgba(239,68,68,.1);color:var(--sp-danger)}
+.sp-badge-new{background:rgba(16,185,129,.15);color:#065f46}
+.sp-badge-db{background:rgba(99,102,241,.1);color:var(--sp-primary)}
+/* Spinner */
+#searchSpinner{display:none}
+.sp-loading{display:inline-block;width:18px;height:18px;border:2px solid rgba(255,255,255,.3);border-radius:50%;border-top-color:#fff;animation:sp-spin .6s linear infinite}
+@keyframes sp-spin{to{transform:rotate(360deg)}}
+/* ── Editor ─────────────────────────────────────────────────────── */
+.sp-editor-section{margin-bottom:1.5rem}
+.sp-section-title{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--sp-text-muted);margin:0 0 .75rem;padding-bottom:.4rem;border-bottom:1px solid var(--sp-border)}
+.sp-field{display:grid;grid-template-columns:140px 1fr;align-items:start;gap:.5rem .75rem;margin-bottom:.65rem}
+.sp-field label{font-size:.85rem;font-weight:600;color:#374151;padding-top:.5rem}
+.sp-input-wrap{display:flex;flex-direction:column;gap:.2rem}
+.sp-input{width:100%;padding:.45rem .7rem;border:1.5px solid var(--sp-border);border-radius:7px;font-size:.875rem;outline:none;transition:border-color .15s,box-shadow .15s;box-sizing:border-box;background:#fff}
+.sp-input:focus{border-color:var(--sp-primary);box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+.sp-input:read-only{background:#f9fafb;color:var(--sp-text-muted);cursor:default}
+.sp-input-changed{border-color:var(--sp-warning)!important;background:rgba(245,158,11,.04)!important}
+.sp-input-changed:focus{box-shadow:0 0 0 3px rgba(245,158,11,.15)!important}
+.sp-ref-note{font-size:.75rem;color:#92400e;display:flex;align-items:center;gap:.3rem}
+.sp-ref-note::before{content:'⚠';font-size:.8rem}
+/* Parameter table */
+.sp-param-table{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:.5rem}
+.sp-param-table th{text-align:left;padding:.4rem .5rem;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--sp-text-muted);border-bottom:2px solid var(--sp-border)}
+.sp-param-table td{padding:.3rem .4rem;vertical-align:top;border-bottom:1px solid #f3f4f6}
+.sp-param-row{transition:background .15s}
+.sp-param-row:hover{background:#fafafa}
+.sp-param-new{border-left:3px solid var(--sp-success)}
+.sp-param-new td:first-child{padding-left:.3rem}
+.sp-param-changed{border-left:3px solid var(--sp-warning)}
+.sp-param-changed td:first-child{padding-left:.3rem}
+.sp-param-input{width:100%;padding:.3rem .5rem;border:1px solid var(--sp-border);border-radius:5px;font-size:.85rem;outline:none;box-sizing:border-box}
+.sp-param-input:focus{border-color:var(--sp-primary);box-shadow:0 0 0 2px rgba(99,102,241,.1)}
+.sp-param-input.changed{border-color:var(--sp-warning);background:rgba(245,158,11,.04)}
+.sp-del-btn{width:24px;height:24px;border:none;border-radius:4px;background:transparent;color:#9ca3af;cursor:pointer;font-size:.9rem;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.sp-del-btn:hover{background:rgba(239,68,68,.1);color:var(--sp-danger)}
+/* Supplier cards */
+.sp-supplier-card{border:1px solid var(--sp-border);border-radius:10px;padding:1rem;margin-bottom:.75rem;background:#fafafa}
+.sp-supplier-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem}
+.sp-supplier-name{font-weight:700;font-size:.9rem;display:flex;align-items:center;gap:.5rem}
+.sp-price-table{width:100%;border-collapse:collapse;font-size:.82rem;margin-top:.5rem}
+.sp-price-table th{padding:.25rem .4rem;text-align:left;font-size:.72rem;font-weight:700;text-transform:uppercase;color:var(--sp-text-muted);border-bottom:1px solid var(--sp-border)}
+.sp-price-table td{padding:.25rem .4rem;border-bottom:1px solid #f3f4f6}
+.sp-price-input{width:100%;padding:.2rem .4rem;border:1px solid var(--sp-border);border-radius:4px;font-size:.82rem;outline:none;box-sizing:border-box}
+.sp-price-input:focus{border-color:var(--sp-primary)}
+/* Scan toast */
+#scanToast{
+  position:fixed;bottom:1.5rem;right:1.5rem;z-index:9999;
+  background:linear-gradient(135deg,#1e1b4b,#312e81);
+  color:#fff;border-radius:14px;padding:1rem 1.25rem;
+  min-width:280px;max-width:380px;
+  box-shadow:0 8px 32px rgba(0,0,0,.35);
+  display:none;opacity:0;
+  transition:opacity .25s ease,transform .25s ease;
+  transform:translateY(16px);
+}
+#scanToast.sp-toast-in{display:block;opacity:1;transform:translateY(0)}
+.sp-toast-head{display:flex;align-items:center;gap:.6rem;font-weight:700;font-size:.95rem;margin-bottom:.5rem}
+.sp-toast-badge{background:rgba(99,102,241,.8);border-radius:6px;padding:.15rem .5rem;font-size:.7rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.sp-toast-row{display:flex;gap:.5rem;align-items:baseline;font-size:.82rem;margin-top:.2rem;opacity:.9}
+.sp-toast-label{min-width:55px;opacity:.6;font-size:.75rem;text-transform:uppercase;letter-spacing:.04em}
+.sp-toast-val{font-weight:600;font-family:monospace;font-size:.88rem;word-break:break-all}
+</style>
+
+<!-- Scan toast notification -->
+<div id="scanToast">
+  <div class="sp-toast-head">
+    <i class="fas fa-barcode"></i>
+    <span>Barcode Scanned</span>
+    <span class="sp-toast-badge" id="scanToastSource"></span>
+  </div>
+  <div class="sp-toast-row"><span class="sp-toast-label">MPN</span><span class="sp-toast-val" id="scanToastMpn">–</span></div>
+  <div class="sp-toast-row" id="scanToastQtyRow"><span class="sp-toast-label">Qty</span><span class="sp-toast-val" id="scanToastQty">–</span></div>
+  <div class="sp-toast-row" id="scanToastBatchRow"><span class="sp-toast-label">Batch</span><span class="sp-toast-val" id="scanToastBatch">–</span></div>
+</div>
+
+<div class="sp-wrap">
+  <!-- Header -->
+  <div class="sp-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+    <div>
+      <h1><i class="fas fa-microchip"></i> Smart Parts – Control Center</h1>
+      <p>Search for an MPN, verify all data in the editor, and save specifically into InvenTree.</p>
+    </div>
+    <button onclick="window.location.assign('/plugin/smartparts/purescan/')" style="display:inline-flex;align-items:center;gap:.5rem;padding:.65rem 1.5rem;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:10px;color:#fff;text-decoration:none;font-weight:600;font-size:.95rem;cursor:pointer;transition:background .2s;white-space:nowrap;backdrop-filter:blur(4px)" onmouseover="this.style.background='rgba(255,255,255,.3)'" onmouseout="this.style.background='rgba(255,255,255,.18)'">
+      <i class="fas fa-crosshairs"></i> PureScan Terminal
+    </button>
+  </div>
+
+  <!-- Search -->
+  <div class="sp-card">
+    <h3><i class="fas fa-search" style="color:var(--sp-primary)"></i> MPN Search</h3>
+    <form id="searchForm" onsubmit="return doSearch(event)">
+      <div class="sp-search-box" style="margin-bottom:1rem">
+        <i class="fas fa-barcode sp-search-icon"></i>
+        <input type="text" id="mpnInput" placeholder="Enter MPN (e.g. LM7805, STM32F103C8T6)" autocomplete="off"/>
+      </div>
+      <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+        <button type="submit" class="sp-btn sp-btn-primary" id="searchBtn">
+          <i class="fas fa-search"></i> Search All Sources
+        </button>
+        <span id="searchSpinner" style="display:none;align-items:center;gap:.5rem">
+          <span class="sp-loading" style="border-color:rgba(99,102,241,.3);border-top-color:var(--sp-primary)"></span>
+          Search in progress…
+        </span>
+      </div>
+    </form>
+  </div>
+
+  <!-- Editor / Results -->
+  <div id="searchResults" style="display:none"></div>
+
+  <!-- Navigation -->
+  <div class="sp-nav-cards" style="margin-bottom:1.5rem">
+    <a href="batch/" class="sp-nav-card">
+      <span class="sp-nav-icon"><i class="fas fa-file-excel"></i></span>
+      <span class="sp-nav-label">Batch Import</span>
+      <span class="sp-nav-desc">Upload Excel/CSV for bulk creation</span>
+    </a>
+    <a href="settings/" class="sp-nav-card">
+      <span class="sp-nav-icon"><i class="fas fa-cogs"></i></span>
+      <span class="sp-nav-label">API Settings</span>
+      <span class="sp-nav-desc">Configure &amp; test API keys</span>
+    </a>
+    <a href="logs/" class="sp-nav-card">
+      <span class="sp-nav-icon"><i class="fas fa-list-alt"></i></span>
+      <span class="sp-nav-label">Activity Log</span>
+      <span class="sp-nav-desc">View search &amp; creation history</span>
+    </a>
+  </div>
+
+  <!-- Status + Log -->
+  <div class="sp-grid">
+    <div class="sp-card">
+      <h3><i class="fas fa-plug" style="color:var(--sp-success)"></i> API Status</h3>
+      <div style="display:flex;flex-direction:column;gap:.75rem">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span>Mouser</span>
+          <span><span class="sp-status-dot {% if mouser_enabled %}active{% else %}inactive{% endif %}"></span>
+          {% if mouser_enabled %}Active{% else %}Inactive{% endif %}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span>DigiKey</span>
+          <span><span class="sp-status-dot {% if digikey_enabled %}active{% else %}inactive{% endif %}"></span>
+          {% if digikey_enabled %}Active{% else %}Inactive{% endif %}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span>LCSC</span>
+          <span><span class="sp-status-dot {% if lcsc_enabled %}active{% else %}inactive{% endif %}"></span>
+          {% if lcsc_enabled %}Active{% else %}Inactive{% endif %}</span>
+        </div>
+      </div>
+    </div>
+    <div class="sp-card">
+      <h3><i class="fas fa-clock" style="color:var(--sp-info)"></i> Recent Activity</h3>
+      {% for log in recent_logs %}
+      <div class="sp-log-item">
+        <span class="sp-log-time">{{ log.timestamp|truncatechars:19 }}</span>
+        <span class="sp-badge {% if log.level == 'ERROR' %}sp-badge-error{% elif log.level == 'WARNING' %}sp-badge-warn{% else %}sp-badge-info{% endif %}">{{ log.level }}</span>
+        <span>{{ log.message }}</span>
+      </div>
+      {% empty %}
+      <p style="color:var(--sp-text-muted);font-size:.9rem">No activity yet. Try searching for a part!</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script src="/static/plugins/smartparts/inventree_smart_parts/ui/scanner.js?v=5"></script>
+<script src="/static/plugins/smartparts/inventree_smart_parts/ui/editor_helpers.js"></script>
+<script src="/static/plugins/smartparts/inventree_smart_parts/ui/editor_main.js"></script>
+<script>
+(function() {
+  // ── Scan toast helpers ────────────────────────────────────────────────────
+  let _toastTimer = null;
+  function showScanToast(parsed) {
+    document.getElementById('scanToastMpn').textContent   = parsed.mpn   || '–';
+    document.getElementById('scanToastQty').textContent   = parsed.quantity != null ? parsed.quantity : '–';
+    document.getElementById('scanToastBatch').textContent = parsed.batch  || '–';
+
+    // Show parse source to help the user understand what was extracted
+    const srcMap = { ansi: '2D DataMatrix', heuristic: '2D DataMatrix (heuristic)', regex: '2D (no separators)', fallback: '1D / Plain scan', '': 'Scan' };
+    document.getElementById('scanToastSource').textContent =
+      parsed.supplierSku
+        ? 'SKU: ' + parsed.supplierSku.slice(0, 14)
+        : (srcMap[parsed.source] || 'Distributor');
+
+    document.getElementById('scanToastQtyRow').style.display   = parsed.quantity != null ? '' : 'none';
+    document.getElementById('scanToastBatchRow').style.display = parsed.batch ? '' : 'none';
+    const toast = document.getElementById('scanToast');
+    toast.style.display = 'block';
+    requestAnimationFrame(() => toast.classList.add('sp-toast-in'));
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => {
+      toast.classList.remove('sp-toast-in');
+      setTimeout(() => { toast.style.display = 'none'; }, 260);
+    }, 4000);
+  }
+
+  // ── Scanner callback ──────────────────────────────────────────────────────
+  if (window.SmartPartsScanner) {
+    SmartPartsScanner.init(function(rawString, parsed) {
+      // Two-stage result: mpn is always populated after the fallback stage
+      // (either from a structured 2D parse or from the raw string itself).
+      if (!parsed.mpn) {
+        // Edge case: truly empty after all stages – nothing useful to do.
+        console.warn('[SmartParts] Scan detected but yielded no MPN:', rawString);
+        return;
+      }
+
+      console.info(
+        '[SmartParts] Scan →', parsed.source,
+        '| MPN:', parsed.mpn,
+        '| Qty:', parsed.quantity,
+        '| Batch:', parsed.batch
+      );
+
+      // Store scan context so the editor can pre-fill qty/batch
+      window._pendingScan = parsed;
+
+      // Fill the MPN search box
+      const mpnEl = document.getElementById('mpnInput');
+      if (mpnEl) mpnEl.value = parsed.mpn;
+
+      // Show the toast immediately
+      showScanToast(parsed);
+
+      // Trigger search
+      const form = document.getElementById('searchForm');
+      if (form) form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+  }
+})();
+</script>
+{% endblock %}

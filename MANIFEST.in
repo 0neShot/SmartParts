@@ -1,0 +1,3 @@
+recursive-include inventree_smart_parts/templates *
+recursive-include inventree_smart_parts/static *
+include README.md

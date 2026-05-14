@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block page_title %}{% trans "Activity Logs" %} | Smart Parts{% endblock %}
+
+{% block content %}
+<style>
+:root{--sp-primary:#6366f1;--sp-primary-hover:#4f46e5;--sp-success:#10b981;--sp-warning:#f59e0b;--sp-danger:#ef4444;--sp-info:#3b82f6;--sp-border:#e5e7eb;--sp-text-muted:#6b7280;--sp-gradient:linear-gradient(135deg,#6366f1,#8b5cf6,#a78bfa);--sp-shadow:0 4px 6px -1px rgba(0,0,0,.1);--sp-shadow-lg:0 10px 15px -3px rgba(0,0,0,.1)}
+.sp-wrap{max-width:1100px;margin:0 auto;padding:1.5rem}
+.sp-header{background:var(--sp-gradient);border-radius:16px;padding:2rem 2.5rem;margin-bottom:2rem;color:#fff;box-shadow:var(--sp-shadow-lg)}
+.sp-header h1{font-size:1.5rem;font-weight:700;margin:0 0 .25rem}
+.sp-header p{margin:0;opacity:.85;font-size:.9rem}
+.sp-card{background:#fff;border:1px solid var(--sp-border);border-radius:12px;box-shadow:var(--sp-shadow);padding:1.5rem;margin-bottom:1.5rem}
+.sp-card h3{font-size:1.1rem;font-weight:600;margin:0 0 1rem;display:flex;align-items:center;gap:.5rem}
+.sp-btn{display:inline-flex;align-items:center;gap:.5rem;padding:.5rem 1rem;border:none;border-radius:8px;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;text-decoration:none}
+.sp-btn-primary{background:var(--sp-primary);color:#fff}
+.sp-btn-outline{background:transparent;color:var(--sp-primary);border:2px solid var(--sp-primary)}
+.sp-btn-outline:hover{background:var(--sp-primary);color:#fff}
+.sp-filter-bar{display:flex;gap:.5rem;margin-bottom:1rem;flex-wrap:wrap;align-items:center}
+.sp-filter-btn{padding:.4rem .75rem;border:1px solid var(--sp-border);border-radius:6px;background:#fff;font-size:.8rem;cursor:pointer;transition:all .2s}
+.sp-filter-btn:hover,.sp-filter-btn.active{border-color:var(--sp-primary);color:var(--sp-primary);background:rgba(99,102,241,.04)}
+table.sp-log-table{width:100%;border-collapse:collapse;font-size:.85rem}
+table.sp-log-table th{text-align:left;padding:.6rem .5rem;border-bottom:2px solid var(--sp-border);font-weight:600;color:var(--sp-text-muted)}
+table.sp-log-table td{padding:.6rem .5rem;border-bottom:1px solid var(--sp-border);vertical-align:top}
+.sp-badge{padding:.15rem .5rem;border-radius:4px;font-size:.7rem;font-weight:700;text-transform:uppercase}
+.sp-badge-info{background:rgba(59,130,246,.1);color:var(--sp-info)}
+.sp-badge-warn{background:rgba(245,158,11,.1);color:var(--sp-warning)}
+.sp-badge-error{background:rgba(239,68,68,.1);color:var(--sp-danger)}
+.sp-empty{text-align:center;padding:3rem;color:var(--sp-text-muted)}
+.sp-empty i{font-size:2rem;margin-bottom:.75rem;display:block}
+</style>
+
+<div class="sp-wrap">
+    <div class="sp-header">
+        <h1><i class="fas fa-list-alt"></i> Activity Logs</h1>
+        <p>View all plugin activity including API searches, part creation, and errors.</p>
+    </div>
+
+    <div class="sp-card">
+        <h3><i class="fas fa-filter" style="color:var(--sp-primary)"></i> Filter</h3>
+        <div class="sp-filter-bar">
+            <button class="sp-filter-btn active" onclick="filterLogs('', this)">All</button>
+            <button class="sp-filter-btn" onclick="filterLogs('INFO', this)">Info</button>
+            <button class="sp-filter-btn" onclick="filterLogs('WARNING', this)">Warning</button>
+            <button class="sp-filter-btn" onclick="filterLogs('ERROR', this)">Error</button>
+            <div style="flex:1"></div>
+            <span id="logTotalBadge" style="font-size:.8rem;color:var(--sp-text-muted);align-self:center"></span>
+            <button class="sp-btn sp-btn-outline" onclick="loadLogs()" style="padding:.4rem .75rem;font-size:.8rem"><i class="fas fa-sync"></i> Refresh</button>
+            <button class="sp-btn sp-btn-outline" onclick="clearLogs()" style="padding:.4rem .75rem;font-size:.8rem;color:var(--sp-danger);border-color:var(--sp-danger)"><i class="fas fa-trash"></i> Clear</button>
+            <a href="../" class="sp-btn sp-btn-outline" style="padding:.4rem .75rem;font-size:.8rem"><i class="fas fa-arrow-left"></i> Dashboard</a>
+        </div>
+    </div>
+
+    <div class="sp-card">
+        <table class="sp-log-table">
+            <thead><tr><th style="width:160px">Timestamp</th><th style="width:70px">Level</th><th>Message</th><th>Details</th></tr></thead>
+            <tbody id="logBody">
+                <tr><td colspan="4" class="sp-empty"><i class="fas fa-spinner fa-spin"></i>Loading...</td></tr>
+            </tbody>
+        </table>
+        <div id="logCount" style="margin-top:.75rem;font-size:.8rem;color:var(--sp-text-muted)"></div>
+    </div>
+</div>
+
+<script>
+let currentFilter = '';
+
+function getCookie(n){let v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return v?v.pop():'';}
+
+function loadLogs() {
+    let url = '../api/logs/?limit=200';
+    if (currentFilter) url += '&level=' + currentFilter;
+
+    const body = document.getElementById('logBody');
+    body.innerHTML = '<tr><td colspan="4" class="sp-empty"><i class="fas fa-spinner fa-spin"></i> Loading…</td></tr>';
+
+    fetch(url)
+    .then(r => {
+        const ct = r.headers.get('content-type') || '';
+        if (!r.ok || !ct.includes('application/json')) {
+            throw new Error('HTTP ' + r.status);
+        }
+        return r.json();
+    })
+    .then(data => {
+        if (!data.logs || data.logs.length === 0) {
+            body.innerHTML = '<tr><td colspan="4" class="sp-empty"><i class="fas fa-inbox"></i><br>No log entries found</td></tr>';
+            document.getElementById('logCount').textContent = '0 entries shown';
+            document.getElementById('logTotalBadge').textContent = data.total + ' total';
+            return;
+        }
+        let html = '';
+        data.logs.forEach(l => {
+            let badgeClass = 'sp-badge-info';
+            if (l.level === 'WARNING') badgeClass = 'sp-badge-warn';
+            if (l.level === 'ERROR')   badgeClass = 'sp-badge-error';
+            const ts = (l.timestamp || '').replace('T', ' ').substring(0, 19);
+            const details = l.details ? `<span style="color:var(--sp-text-muted);font-size:.78rem"> — ${l.details}</span>` : '';
+            html += `<tr>
+                <td style="white-space:nowrap;font-family:monospace;font-size:.8rem">${ts}</td>
+                <td><span class="sp-badge ${badgeClass}">${l.level}</span></td>
+                <td>${l.message}${details}</td>
+                <td style="display:none"></td>
+            </tr>`;
+        });
+        body.innerHTML = html;
+        document.getElementById('logCount').textContent = data.logs.length + ' of ' + data.total + ' entries shown';
+        document.getElementById('logTotalBadge').textContent = data.total + ' total';
+    })
+    .catch(err => {
+        body.innerHTML = '<tr><td colspan="4" class="sp-empty" style="color:var(--sp-danger)"><i class="fas fa-exclamation-triangle"></i><br>Failed to load logs: ' + err.message + '</td></tr>';
+    });
+}
+
+function filterLogs(level, btn) {
+    currentFilter = level;
+    document.querySelectorAll('.sp-filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    loadLogs();
+}
+
+function clearLogs() {
+    if (!confirm('Clear all activity logs? This cannot be undone.')) return;
+    fetch('../api/logs/clear/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    })
+    .then(r => {
+        const ct = r.headers.get('content-type') || '';
+        if (!r.ok || !ct.includes('application/json')) {
+            return r.text().then(text => {
+                throw new Error('HTTP ' + r.status + (r.status === 403 ? ' (CSRF error – try refreshing the page)' : ''));
+            });
+        }
+        return r.json();
+    })
+    .then(data => {
+        if (data.success) loadLogs();
+        else throw new Error(data.message || 'Unknown error');
+    })
+    .catch(err => alert('Failed to clear logs: ' + err.message));
+}
+
+loadLogs();
+</script>
+{% endblock %}

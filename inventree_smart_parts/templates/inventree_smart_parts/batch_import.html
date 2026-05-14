@@ -1,0 +1,711 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block page_title %}{% trans "Batch Import" %} | Smart Parts{% endblock %}
+
+{% block content %}
+<style>
+:root { --sp-primary:#6366f1; --sp-primary-hover:#4f46e5; --sp-success:#10b981; --sp-warning:#f59e0b; --sp-danger:#ef4444; --sp-info:#3b82f6; --sp-border:#e5e7eb; --sp-text-muted:#6b7280; --sp-gradient:linear-gradient(135deg,#6366f1,#8b5cf6,#a78bfa); --sp-shadow:0 4px 6px -1px rgba(0,0,0,.1); --sp-shadow-lg:0 10px 15px -3px rgba(0,0,0,.1); }
+.sp-wrap{max-width:1000px;margin:0 auto;padding:1.5rem}
+.sp-header{background:var(--sp-gradient);border-radius:16px;padding:2rem 2.5rem;margin-bottom:2rem;color:#fff;box-shadow:var(--sp-shadow-lg)}
+.sp-header h1{font-size:1.5rem;font-weight:700;margin:0 0 .25rem}
+.sp-header p{margin:0;opacity:.85;font-size:.9rem}
+.sp-card{background:#fff;border:1px solid var(--sp-border);border-radius:12px;box-shadow:var(--sp-shadow);padding:1.5rem;margin-bottom:1.5rem}
+.sp-card h3{font-size:1.1rem;font-weight:600;margin:0 0 1rem;display:flex;align-items:center;gap:.5rem}
+.sp-btn{display:inline-flex;align-items:center;gap:.5rem;padding:.625rem 1.25rem;border:none;border-radius:8px;font-size:.9rem;font-weight:600;cursor:pointer;transition:all .2s;text-decoration:none}
+.sp-btn-primary{background:var(--sp-primary);color:#fff}
+.sp-btn-primary:hover{background:var(--sp-primary-hover);transform:translateY(-1px)}
+.sp-btn-outline{background:transparent;color:var(--sp-primary);border:2px solid var(--sp-primary)}
+.sp-btn-outline:hover{background:var(--sp-primary);color:#fff}
+.sp-btn-success{background:var(--sp-success);color:#fff}
+.sp-dropzone{border:2px dashed var(--sp-border);border-radius:12px;padding:3rem;text-align:center;cursor:pointer;transition:all .3s}
+.sp-dropzone:hover,.sp-dropzone.dragover{border-color:var(--sp-primary);background:rgba(99,102,241,.04)}
+.sp-dropzone i{font-size:2.5rem;color:var(--sp-primary);margin-bottom:1rem}
+.sp-progress-bar{width:100%;height:8px;background:var(--sp-border);border-radius:4px;overflow:hidden;margin:1rem 0}
+.sp-progress-fill{height:100%;background:var(--sp-gradient);border-radius:4px;transition:width .3s;width:0%}
+.sp-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin:1rem 0}
+.sp-stat-mini{text-align:center;padding:.75rem;border-radius:8px;background:rgba(99,102,241,.04)}
+.sp-stat-mini .val{font-size:1.5rem;font-weight:700}
+.sp-stat-mini .lbl{font-size:.75rem;color:var(--sp-text-muted)}
+.sp-stat-mini.success .val{color:var(--sp-success)}
+.sp-stat-mini.updated .val{color:var(--sp-info)}
+.sp-stat-mini.skipped .val{color:var(--sp-warning)}
+.sp-stat-mini.failed .val{color:var(--sp-danger)}
+table.sp-table{width:100%;border-collapse:collapse;font-size:.85rem}
+table.sp-table th{text-align:left;padding:.5rem;border-bottom:2px solid var(--sp-border);font-weight:600}
+table.sp-table td{padding:.5rem;border-bottom:1px solid var(--sp-border)}
+.sp-badge{padding:.15rem .5rem;border-radius:4px;font-size:.75rem;font-weight:600}
+.sp-badge-success{background:rgba(16,185,129,.1);color:var(--sp-success)}
+.sp-badge-error{background:rgba(239,68,68,.1);color:var(--sp-danger)}
+.sp-badge-warn{background:rgba(245,158,11,.1);color:var(--sp-warning)}
+/* Assembly panel */
+.sp-asm-panel{border:1px solid rgba(99,102,241,.25);border-radius:10px;background:rgba(99,102,241,.03);padding:1rem;margin-top:.75rem;display:none}
+.sp-asm-panel.visible{display:block}
+.sp-asm-field{display:flex;flex-direction:column;gap:.25rem;margin-bottom:.75rem}
+.sp-asm-field label{font-size:.8rem;font-weight:600;color:var(--sp-text-muted)}
+.sp-asm-field input,.sp-asm-field select{padding:.5rem .75rem;border:1px solid var(--sp-border);border-radius:8px;font-size:.9rem;outline:none;transition:border-color .2s}
+.sp-asm-field input:focus,.sp-asm-field select:focus{border-color:var(--sp-primary)}
+.sp-asm-result{padding:1rem;border-radius:10px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.2);margin-top:1rem}
+.sp-asm-result h4{color:var(--sp-success);margin:0 0 .5rem;font-size:1rem}
+/* Review grid */
+.sp-review-wrap{overflow-x:auto;max-height:55vh;overflow-y:auto;border:1px solid var(--sp-border);border-radius:8px}
+table.sp-grid{width:100%;border-collapse:collapse;font-size:.82rem}
+table.sp-grid thead th{position:sticky;top:0;background:#f9fafb;z-index:2;padding:0}
+table.sp-grid thead th select.col-map{width:100%;padding:.35rem .4rem;border:none;border-bottom:2px solid var(--sp-primary);background:#f3f4f6;font-size:.78rem;font-weight:600;cursor:pointer;color:var(--sp-primary)}
+table.sp-grid tbody td{border:1px solid #f0f0f0;padding:0}
+table.sp-grid tbody td[contenteditable]{padding:.3rem .4rem;min-width:80px;outline:none;white-space:nowrap}
+table.sp-grid tbody td[contenteditable]:focus{background:rgba(99,102,241,.05);box-shadow:inset 0 0 0 2px var(--sp-primary)}
+table.sp-grid tbody tr:hover td{background:rgba(99,102,241,.02)}
+.col-ignored select.col-map{color:var(--sp-text-muted);border-bottom-color:var(--sp-border)}
+</style>
+
+<div class="sp-wrap">
+    <div class="sp-header">
+        <h1><i class="fas fa-file-excel"></i> Batch Import</h1>
+        <p>Upload an Excel (.xlsx) or CSV file with MPNs for bulk part creation. Errors are collected – the batch never aborts.</p>
+    </div>
+
+    <!-- Upload Zone -->
+    <div class="sp-card" id="uploadCard">
+        <h3><i class="fas fa-upload" style="color:var(--sp-primary)"></i> Upload File</h3>
+        <div class="sp-dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p style="font-weight:600;margin:.5rem 0">Drop your file here or click to browse</p>
+            <p style="font-size:.85rem;color:var(--sp-text-muted)">
+                Supports <strong>.xlsx</strong> and <strong>.csv</strong>
+            </p>
+            <div style="margin-top:.75rem;display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;font-size:.8rem">
+                <span style="padding:.25rem .6rem;border-radius:5px;background:rgba(99,102,241,.08);color:var(--sp-primary)">📋 Standard: MPN column required</span>
+                <span style="padding:.25rem .6rem;border-radius:5px;background:rgba(16,185,129,.08);color:#065f46">⚡ Altium BOM auto-detected</span>
+            </div>
+        </div>
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFile(this.files[0])">
+        <div id="fileInfo" style="display:none;margin-top:1rem;padding:.75rem;border-radius:8px;background:rgba(99,102,241,.04);gap:.75rem;flex-direction:column">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+                <span id="fileName"></span>
+                <div style="display:flex;gap:.5rem">
+                    <span id="formatBadge" style="display:none;padding:.2rem .6rem;border-radius:5px;font-size:.8rem;font-weight:600"></span>
+                    <button class="sp-btn sp-btn-primary" onclick="openReview()" id="startBtn">
+                        <i class="fas fa-table"></i> Review & Map
+                    </button>
+                </div>
+            </div>
+            <!-- Preview table -->
+            <div id="previewWrap" style="display:none">
+                <p style="font-size:.8rem;font-weight:600;margin:.25rem 0">Preview (first 5 rows):</p>
+                <div style="overflow-x:auto">
+                    <table class="sp-table" id="previewTable" style="font-size:.8rem"></table>
+                </div>
+            </div>
+            <!-- Assembly BOM option -->
+            <div style="margin-top:.5rem;padding-top:.75rem;border-top:1px solid var(--sp-border)">
+                <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;font-size:.9rem;font-weight:600">
+                    <input type="checkbox" id="createAssembly" onchange="toggleAssemblyPanel(this.checked)"
+                           style="width:16px;height:16px;accent-color:var(--sp-primary)">
+                    <i class="fas fa-sitemap" style="color:var(--sp-primary)"></i> Create Assembly Part &amp; Link BOM
+                </label>
+                <p style="font-size:.8rem;color:var(--sp-text-muted);margin:.25rem 0 0 1.5rem">
+                    After importing, automatically create an Assembly Part and attach all sub-parts as BOM items.
+                </p>
+                <div class="sp-asm-panel" id="asmPanel">
+                    <div style="display:grid;grid-template-columns:2fr 1fr;gap:.75rem">
+                        <div class="sp-asm-field">
+                            <label for="asmName">Assembly Name <span style="color:var(--sp-danger)">*</span></label>
+                            <input type="text" id="asmName" placeholder="e.g. Mainboard v2.1" />
+                        </div>
+                        <div class="sp-asm-field">
+                            <label for="asmRevision">Revision</label>
+                            <input type="text" id="asmRevision" placeholder="e.g. A" />
+                        </div>
+                    </div>
+                    <div class="sp-asm-field">
+                        <label for="asmDescription">Description (optional)</label>
+                        <input type="text" id="asmDescription" placeholder="e.g. Main processor board for Product X" />
+                    </div>
+                    <div class="sp-asm-field" style="margin-bottom:0">
+                        <label for="asmCategory"><i class="fas fa-folder-open" style="color:var(--sp-primary);margin-right:.3rem"></i>Category</label>
+                        <select id="asmCategory">
+                            <option value="">-- No category (assign later) --</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Review & Map card -->
+    <div class="sp-card" id="reviewCard" style="display:none">
+        <h3><i class="fas fa-table" style="color:var(--sp-primary)"></i> Review &amp; Map Columns</h3>
+        <p style="font-size:.85rem;color:var(--sp-text-muted);margin:0 0 .75rem">
+            Use the dropdowns to assign each column to the correct field. Click any cell to edit its value. Columns set to <em>Ignore</em> are skipped.
+        </p>
+        <div class="sp-review-wrap">
+            <table class="sp-grid" id="reviewGrid"></table>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:1rem;flex-wrap:wrap;gap:.5rem">
+            <span id="reviewRowCount" style="font-size:.85rem;color:var(--sp-text-muted)"></span>
+            <div style="display:flex;gap:.5rem">
+                <button class="sp-btn sp-btn-outline" onclick="closeReview()">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+                <button class="sp-btn sp-btn-primary" onclick="startUpload()" id="confirmBtn">
+                    <i class="fas fa-rocket"></i> Confirm &amp; Import
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="sp-card" id="progressCard" style="display:none">
+        <h3><i class="fas fa-spinner fa-spin" style="color:var(--sp-primary)"></i> Processing...</h3>
+        <div class="sp-progress-bar"><div class="sp-progress-fill" id="progressFill"></div></div>
+        <p id="progressText" style="font-size:.85rem;color:var(--sp-text-muted)">0 / 0 parts processed</p>
+        <div class="sp-stats">
+            <div class="sp-stat-mini success"><div class="val" id="statCreated">0</div><div class="lbl">Created</div></div>
+            <div class="sp-stat-mini updated"><div class="val" id="statUpdated">0</div><div class="lbl">Updated</div></div>
+            <div class="sp-stat-mini skipped"><div class="val" id="statSkipped">0</div><div class="lbl">Skipped</div></div>
+            <div class="sp-stat-mini failed"><div class="val" id="statFailed">0</div><div class="lbl">Failed</div></div>
+        </div>
+        <div id="phase2Banner" style="display:none;margin-top:.75rem;padding:.6rem 1rem;background:rgba(99,102,241,.08);border-radius:8px;font-size:.85rem;color:var(--sp-primary)">
+            <i class="fas fa-sitemap fa-spin"></i> <strong>Phase 2:</strong> Creating assembly and linking BOM items&hellip;
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div class="sp-card" id="resultsCard" style="display:none">
+        <h3><i class="fas fa-clipboard-check" style="color:var(--sp-success)"></i> Import Complete</h3>
+        <div id="errorsList"></div>
+        <!-- Assembly result injected here by showResults() -->
+        <div id="assemblyResult"></div>
+        <div style="margin-top:1rem">
+            <a id="downloadReport" class="sp-btn sp-btn-outline" style="display:none"><i class="fas fa-download"></i> Download Full Report (CSV)</a>
+            <a href="../" class="sp-btn sp-btn-primary" style="margin-left:.5rem"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+        </div>
+    </div>
+</div>
+
+<script>
+let selectedFile = null;
+let currentJobId = null;
+
+const dropzone = document.getElementById('dropzone');
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', e => { e.preventDefault(); dropzone.classList.remove('dragover'); if(e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]); });
+
+function getCookie(n){let v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return v?v.pop():'';}
+
+function handleFile(file) {
+    if (!file) return;
+    selectedFile = file;
+    const info = document.getElementById('fileInfo');
+    info.style.display = 'flex';
+    document.getElementById('fileName').innerHTML = '<i class="fas fa-file"></i> ' + file.name + ' (' + (file.size/1024).toFixed(1) + ' KB)';
+    // Clear preview
+    document.getElementById('previewWrap').style.display = 'none';
+    document.getElementById('formatBadge').style.display = 'none';
+    // Parse locally for preview (CSV only)
+    if (file.name.endsWith('.csv')) {
+        previewCsv(file);
+    }
+}
+
+function previewCsv(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const text = e.target.result;
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length < 2) return;
+        // Parse header (strip BOM chars, trim quotes)
+        const headers = parseCsvLine(lines[0]).map(h => h.replace(/^"|"$/g, '').trim());
+
+        const colMap = buildAltiumColMap(headers);
+        const isAltium = colMap.isAltium;
+
+        const badge = document.getElementById('formatBadge');
+        badge.style.display = 'inline-block';
+        if (isAltium) {
+            const mode = colMap.mpnClean ? 'Format B – clean' : 'Format A – combined';
+            badge.textContent = `⚡ Altium BOM (${mode})`;
+            badge.style.cssText = 'display:inline-block;padding:.2rem .6rem;border-radius:5px;font-size:.8rem;font-weight:600;background:rgba(16,185,129,.1);color:#065f46';
+        } else {
+            badge.textContent = '📋 Standard CSV';
+            badge.style.cssText = 'display:inline-block;padding:.2rem .6rem;border-radius:5px;font-size:.8rem;font-weight:600;background:rgba(99,102,241,.1);color:var(--sp-primary)';
+        }
+
+        // Parse ALL data rows for the review grid (not just 5)
+        const allDataLines = lines.slice(1);
+        const allRows = allDataLines.map(line => {
+            const vals = parseCsvLine(line);
+            const obj = {};
+            headers.forEach((h, i) => { obj[h] = (vals[i] || '').trim().replace(/^"|"$/g, ''); });
+            return obj;
+        }).filter(row => Object.values(row).some(v => v.trim()));
+        buildReviewGrid(headers, allRows);
+
+        // Small preview table (first 5 rows, key cols only) shown in upload card
+        const previewRows = allDataLines.slice(0, 5);
+        const colsToShow = isAltium
+            ? ['MPN', 'Manufacturer', 'Description', 'Qty']
+            : headers.filter(h => h).slice(0, 6);
+        let thead = '<thead><tr>';
+        colsToShow.forEach(h => { thead += `<th>${h}</th>`; });
+        thead += '</tr></thead>';
+        let tbody = '<tbody>';
+        previewRows.forEach(line => {
+            const vals = parseCsvLine(line);
+            const rowMap = {};
+            headers.forEach((h, i) => { rowMap[h.toLowerCase().trim()] = (vals[i] || '').trim().replace(/^"|"$/g,''); });
+            tbody += '<tr>';
+            if (isAltium) {
+                let mpn, mfr;
+                if (colMap.mpnClean) {
+                    mpn = rowMap[colMap.mpnCol] || '';
+                    mfr = colMap.mfrCol ? (rowMap[colMap.mfrCol] || '') : '';
+                } else {
+                    const rawPn = colMap.mpnCol ? (rowMap[colMap.mpnCol] || '') : '';
+                    const extracted = clientExtract(rawPn);
+                    mpn = extracted.mpn;
+                    mfr = extracted.mfr || (colMap.mfrCol ? rowMap[colMap.mfrCol] || '' : '');
+                }
+                const desc = (colMap.descCol ? rowMap[colMap.descCol] : '') || '';
+                const qty  = (colMap.qtyCol  ? rowMap[colMap.qtyCol]  : '') || '1';
+                const mpnStyle = mpn ? 'color:var(--sp-success);font-weight:600' : 'color:var(--sp-danger);font-style:italic';
+                tbody += `<td style="${mpnStyle}">${esc(mpn || '(empty)')}</td><td style="color:var(--sp-text-muted)">${esc(mfr)}</td><td>${esc(desc.substring(0,40))}</td><td>${esc(qty)}</td>`;
+            } else {
+                colsToShow.forEach(h => { tbody += `<td>${esc(rowMap[h.toLowerCase()] || '')}</td>`; });
+            }
+            tbody += '</tr>';
+        });
+        tbody += '</tbody>';
+        const tbl = document.getElementById('previewTable');
+        tbl.innerHTML = thead + tbody;
+        document.getElementById('previewWrap').style.display = 'block';
+    };
+    reader.readAsText(file);
+}
+
+// ── Column detection (mirrors Python AltiumColumnMap) ──────────────────────
+const _MPN_CLEAN_ALIASES  = ['manufacturer part number 1','manufacturer part number','mpn','mfr part number','mfr part no','mfr pn'];
+const _MPN_COMBO_ALIASES  = ['part number','partnumber','part no','component'];
+const _MFR_ALIASES_JS     = ['manufacturer 1','manufacturer','hersteller','mfr','make'];
+const _QTY_ALIASES_JS     = ['quantity','qty','menge','anzahl','count'];
+const _DESC_ALIASES_JS    = ['description','beschreibung','comment','notes'];
+const _NAME_ALIASES_JS    = ['name','value','component value'];
+
+function buildAltiumColMap(headers) {
+    const lower = headers.map(h => h.toLowerCase().trim());
+    const idx = alias => { const i = lower.indexOf(alias); return i >= 0 ? headers[i].toLowerCase().trim() : null; };
+    const firstOf = list => { for (const a of list) { const r = idx(a); if (r !== null) return r; } return null; };
+
+    const mpnCleanCol = firstOf(_MPN_CLEAN_ALIASES);
+    const mpnComboCol = mpnCleanCol ? null : firstOf(_MPN_COMBO_ALIASES);
+    const mpnCol      = mpnCleanCol || mpnComboCol;
+    const mpnClean    = !!mpnCleanCol;
+
+    const mfrCol  = firstOf(_MFR_ALIASES_JS);
+    const qtyCol  = firstOf(_QTY_ALIASES_JS);
+    const descCol = firstOf(_DESC_ALIASES_JS);
+    const nameCol = firstOf(_NAME_ALIASES_JS);
+    const isAltium = !!(mpnCol || lower.includes('designator'));
+
+    return { isAltium, mpnCol, mpnClean, mfrCol, qtyCol, descCol, nameCol };
+}
+
+function detectAltium(headers) {
+    return buildAltiumColMap(headers).isAltium;
+}
+
+
+// Client-side manufacturer prefix extraction (mirrors the Python logic)
+const KNOWN_MFR = [
+    'Analog Devices','AVX Corporation','Broadcom','Bourns','CUI Devices',
+    'Diodes Incorporated','EPCOS','Infineon Technologies','International Rectifier',
+    'Kemet','Littelfuse','Microchip Technology','Molex','Murata Manufacturing',
+    'Murata','NXP Semiconductors','NXP','ON Semiconductor','Panasonic',
+    'Renesas Electronics','Renesas','Rohm Semiconductor','Rohm',
+    'Samsung Electro-Mechanics','Samsung','Semtech','STMicroelectronics',
+    'Taiyo Yuden','TDK Corporation','TDK','Texas Instruments','TE Connectivity',
+    'Vishay','Würth Elektronik','Wurth Elektronik','Wurth','Yageo','Amphenol',
+    'Hirose','JAE Electronics','JST','Kyocera AVX','Kyocera','LCSC',
+    'Maxim Integrated','Maxim','Microchip','Nexperia','onsemi','Osram',
+    'ROHM','SAMSUNG','Skyworks','Susumu','Toshiba','Winbond',
+].sort((a,b) => b.length - a.length);
+
+function clientExtract(raw) {
+    const cleaned = raw.replace(/[\s,'\'"]+$/,'').replace(/^[\s,'\'"]+/,'').trim();
+    for (const mfr of KNOWN_MFR) {
+        if (cleaned.toLowerCase().startsWith(mfr.toLowerCase())) {
+            const mpn = cleaned.slice(mfr.length).replace(/^[\s,]+/,'').replace(/[\s,]+$/,'').trim();
+            if (mpn.length >= 3) return { mfr, mpn };
+        }
+    }
+    return { mfr: '', mpn: cleaned };
+}
+
+function parseCsvLine(line) {
+    // Simple CSV parser handling quoted fields
+    const result = [];
+    let current = '', inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') { inQuotes = !inQuotes; }
+        else if (ch === ',' && !inQuotes) { result.push(current); current = ''; }
+        else { current += ch; }
+    }
+    result.push(current);
+    return result;
+}
+
+function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function toggleAssemblyPanel(checked) {
+    document.getElementById('asmPanel').classList.toggle('visible', checked);
+    if (checked) loadAssemblyCategories();
+}
+
+let _asmCategoriesLoaded = false;
+function loadAssemblyCategories() {
+    if (_asmCategoriesLoaded) return;
+    const sel = document.getElementById('asmCategory');
+    sel.innerHTML = '<option value="">Loading categories...</option>';
+
+    fetch('/api/part/category/?limit=1000&ordering=pathstring', {
+        headers: { 'Accept': 'application/json' }
+    })
+    .then(r => r.json())
+    .then(data => {
+        const cats = data.results || data;  // handle both paginated and raw
+        let html = '<option value="">-- No category (assign later) --</option>';
+        cats.forEach(c => {
+            const path = c.pathstring || c.name || ('Category ' + c.pk);
+            html += `<option value="${c.pk}">${esc(path)}</option>`;
+        });
+        sel.innerHTML = html;
+        _asmCategoriesLoaded = true;
+    })
+    .catch(err => {
+        console.error('Failed to load categories:', err);
+        sel.innerHTML = '<option value="">-- Could not load categories --</option>';
+    });
+}
+
+// ── Column mapping options ─────────────────────────────────────────────────
+const FIELD_OPTIONS = [
+    { value: 'mpn',          label: 'MPN' },
+    { value: 'quantity',     label: 'Quantity' },
+    { value: 'designator',   label: 'Designator' },
+    { value: 'name',         label: 'Part Name' },
+    { value: 'description',  label: 'Description' },
+    { value: 'manufacturer', label: 'Manufacturer' },
+    { value: '__ignore__',   label: '— Ignore —' },
+];
+
+// Raw parsed rows (all columns kept) for the review grid
+let _reviewRows    = [];
+let _reviewHeaders = [];
+
+function _autoMap(header) {
+    const h = header.toLowerCase().trim();
+    if (['manufacturer part number 1','manufacturer part number','mpn','mfr part number','mfr pn','part number'].includes(h)) return 'mpn';
+    if (['quantity','qty','menge','anzahl','count'].includes(h)) return 'quantity';
+    if (['designator','reference'].includes(h)) return 'designator';
+    if (['name','value','component value'].includes(h)) return 'name';
+    if (['description','beschreibung','comment','notes'].includes(h)) return 'description';
+    if (['manufacturer 1','manufacturer','hersteller','mfr','make'].includes(h)) return 'manufacturer';
+    return '__ignore__';
+}
+
+function buildReviewGrid(headers, rows) {
+    _reviewHeaders = headers;
+    _reviewRows    = rows;
+
+    let optHtml = FIELD_OPTIONS.map(o =>
+        `<option value="${o.value}">${o.value === '__ignore__' ? o.label : o.label}</option>`
+    ).join('');
+
+    // Header row with dropdowns
+    let thead = '<thead><tr>';
+    headers.forEach((h, ci) => {
+        const mapped = _autoMap(h);
+        const selOpts = FIELD_OPTIONS.map(o =>
+            `<option value="${o.value}"${o.value === mapped ? ' selected' : ''}>${o.label}</option>`
+        ).join('');
+        thead += `<th class="${mapped === '__ignore__' ? 'col-ignored' : ''}" data-ci="${ci}">`
+               + `<select class="col-map" data-ci="${ci}" onchange="onColMapChange(this)">${selOpts}</select>`
+               + `</th>`;
+    });
+    thead += '</tr></thead>';
+
+    // Data rows – all cells editable
+    let tbody = '<tbody>';
+    rows.forEach((row, ri) => {
+        tbody += '<tr>';
+        headers.forEach((h, ci) => {
+            const val = (row[h] || '').trim().replace(/^"|"$/g, '');
+            tbody += `<td contenteditable="true" data-ri="${ri}" data-ci="${ci}">${esc(val)}</td>`;
+        });
+        tbody += '</tr>';
+    });
+    tbody += '</tbody>';
+
+    document.getElementById('reviewGrid').innerHTML = thead + tbody;
+    document.getElementById('reviewRowCount').textContent = rows.length + ' rows · click any cell to edit';
+
+    // Dim ignored columns immediately
+    headers.forEach((h, ci) => {
+        if (_autoMap(h) === '__ignore__') _dimCol(ci, true);
+    });
+}
+
+function onColMapChange(sel) {
+    const ci = parseInt(sel.dataset.ci);
+    const ignored = sel.value === '__ignore__';
+    sel.closest('th').className = ignored ? 'col-ignored' : '';
+    _dimCol(ci, ignored);
+}
+
+function _dimCol(ci, dim) {
+    const grid = document.getElementById('reviewGrid');
+    grid.querySelectorAll(`td[data-ci="${ci}"]`).forEach(td => {
+        td.contentEditable = dim ? 'false' : 'true';
+        td.style.color = dim ? '#ccc' : '';
+        td.style.background = dim ? '#fafafa' : '';
+    });
+}
+
+function openReview() {
+    if (!selectedFile) return;
+    if (_reviewRows.length === 0) {
+        alert('Please wait for the file to be parsed.');
+        return;
+    }
+    document.getElementById('uploadCard').style.display = 'none';
+    document.getElementById('reviewCard').style.display = 'block';
+}
+
+function closeReview() {
+    document.getElementById('reviewCard').style.display = 'none';
+    document.getElementById('uploadCard').style.display = 'block';
+}
+
+function _collectReviewedRows() {
+    // Read current column→field mapping
+    const mapping = {}; // colIndex → field key
+    document.querySelectorAll('#reviewGrid thead select.col-map').forEach(sel => {
+        mapping[parseInt(sel.dataset.ci)] = sel.value;
+    });
+
+    const rows = [];
+    document.querySelectorAll('#reviewGrid tbody tr').forEach(tr => {
+        const obj = {};
+        tr.querySelectorAll('td[data-ci]').forEach(td => {
+            const ci    = parseInt(td.dataset.ci);
+            const field = mapping[ci];
+            if (!field || field === '__ignore__') return;
+            obj[field] = td.textContent.trim();
+        });
+        if (obj.mpn) rows.push(obj); // only keep rows with an MPN
+    });
+    return rows;
+}
+
+function startUpload() {
+    if (!selectedFile) return;
+
+    // Validate assembly name if checkbox is ticked
+    const createAssembly = document.getElementById('createAssembly').checked;
+    const asmName = document.getElementById('asmName')?.value.trim() || '';
+    if (createAssembly && !asmName) {
+        document.getElementById('asmName').focus();
+        document.getElementById('asmName').style.borderColor = 'var(--sp-danger)';
+        return;
+    }
+
+    // Build payload from reviewed grid rows (JSON-encoded rows + original file for non-CSV)
+    const reviewedRows = _collectReviewedRows();
+    if (reviewedRows.length === 0) {
+        alert('No rows with a valid MPN found. Please check your column mapping.');
+        return;
+    }
+
+    const fd = new FormData();
+    // Always include the original file so the backend can detect format
+    fd.append('file', selectedFile);
+    // Include pre-parsed, user-corrected rows as JSON so the backend skips re-parsing
+    fd.append('reviewed_rows', JSON.stringify(reviewedRows));
+
+    if (createAssembly) {
+        fd.append('create_assembly', 'true');
+        fd.append('assembly_name', asmName);
+        fd.append('assembly_description', document.getElementById('asmDescription')?.value.trim() || '');
+        fd.append('assembly_revision',    document.getElementById('asmRevision')?.value.trim()    || '');
+        const catId = document.getElementById('asmCategory')?.value || '';
+        if (catId) fd.append('assembly_category_id', catId);
+    }
+
+    document.getElementById('reviewCard').style.display = 'none';
+    document.getElementById('progressCard').style.display = 'block';
+
+    const btn = document.getElementById('confirmBtn');
+    if (btn) btn.disabled = true;
+
+    fetch('upload/', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCookie('csrftoken') },
+        body: fd
+    })
+    .then(r => {
+        const ct = r.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) throw new Error('HTTP ' + r.status);
+        return r.json();
+    })
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+            document.getElementById('reviewCard').style.display = 'block';
+            document.getElementById('progressCard').style.display = 'none';
+            if (btn) btn.disabled = false;
+            return;
+        }
+        currentJobId = data.job_id;
+        pollStatus();
+    })
+    .catch(err => {
+        alert('Upload failed: ' + err.message);
+        document.getElementById('reviewCard').style.display = 'block';
+        document.getElementById('progressCard').style.display = 'none';
+        if (btn) btn.disabled = false;
+    });
+}
+
+let _pollRetryCount = 0;
+
+function pollStatus() {
+    if (!currentJobId) return;
+    fetch('status/' + currentJobId + '/')
+    .then(r => {
+        const ct = r.headers.get('content-type') || '';
+        // Guard: must be JSON AND a success status
+        if (!r.ok || !ct.includes('application/json')) {
+            return r.text().then(text => {
+                throw new Error('HTTP ' + r.status);
+            });
+        }
+        return r.json();
+    })
+    .then(job => {
+        _pollRetryCount = 0;
+
+        // If the server returned an error payload (e.g. job not found), stop polling
+        if (job.error) {
+            showError('Job status error: ' + job.error);
+            return;
+        }
+
+        // Safe reads with defaults to avoid undefined display values
+        const processed  = job.processed_rows  ?? 0;
+        const total      = job.total_rows       ?? 0;
+        const pct        = job.progress_percent ?? 0;
+        const status     = job.status           ?? 'pending';
+
+        // Update progress bar
+        document.getElementById('progressFill').style.width = pct + '%';
+
+        // Status label
+        const h3 = document.getElementById('progressCard').querySelector('h3');
+        const p2Banner = document.getElementById('phase2Banner');
+        if (status === 'pending') {
+            h3.innerHTML = '<i class="fas fa-clock" style="color:var(--sp-primary)"></i> Waiting to start\u2026';
+            document.getElementById('progressText').textContent = 'Queued \u2013 starting shortly\u2026';
+            p2Banner.style.display = 'none';
+        } else if (status === 'phase2') {
+            h3.innerHTML = '<i class="fas fa-sitemap fa-spin" style="color:var(--sp-primary)"></i> Building Assembly BOM\u2026';
+            document.getElementById('progressText').textContent = 'All parts processed \u2013 creating assembly\u2026';
+            p2Banner.style.display = 'block';
+        } else {
+            h3.innerHTML = '<i class="fas fa-spinner fa-spin" style="color:var(--sp-primary)"></i> Processing\u2026';
+            document.getElementById('progressText').textContent =
+                `${processed} / ${total} parts processed (${pct}%)`;
+            p2Banner.style.display = 'none';
+        }
+
+        // Live counters
+        document.getElementById('statCreated').textContent = job.created  ?? 0;
+        document.getElementById('statUpdated').textContent = job.updated  ?? 0;
+        document.getElementById('statSkipped').textContent = job.skipped  ?? 0;
+        document.getElementById('statFailed').textContent  = job.failed   ?? 0;
+
+        if (status === 'completed' || status === 'failed') {
+            showResults(job);
+        } else {
+            // Poll frequently while running so the bar moves smoothly
+            const interval = status === 'pending' ? 800 : 500;
+            setTimeout(pollStatus, interval);
+        }
+    })
+    .catch(err => {
+        _pollRetryCount++;
+        if (_pollRetryCount < 10) {
+            setTimeout(pollStatus, 2000);
+        } else {
+            showError('Connection lost after ' + _pollRetryCount + ' retries: ' + err.message);
+        }
+    });
+}
+
+function showError(msg) {
+    document.getElementById('progressCard').querySelector('h3').innerHTML =
+        '<i class="fas fa-exclamation-triangle" style="color:var(--sp-danger)"></i> Error';
+    document.getElementById('progressText').textContent = msg;
+}
+
+
+
+function showResults(job) {
+    document.getElementById('progressCard').querySelector('h3').innerHTML = '<i class="fas fa-check-circle" style="color:var(--sp-success)"></i> Complete!';
+    document.getElementById('resultsCard').style.display = 'block';
+
+    if (job.errors && job.errors.length > 0) {
+        let html = '<h4 style="color:var(--sp-danger);margin-bottom:.5rem"><i class="fas fa-exclamation-circle"></i> ' + job.errors.length + ' Error(s)</h4>';
+        html += '<table class="sp-table"><thead><tr><th>Row</th><th>MPN</th><th>Error</th></tr></thead><tbody>';
+        job.errors.forEach(e => { html += '<tr><td>' + e.row + '</td><td><code>' + e.mpn + '</code></td><td>' + e.error + '</td></tr>'; });
+        html += '</tbody></table>';
+        document.getElementById('errorsList').innerHTML = html;
+    } else {
+        document.getElementById('errorsList').innerHTML = '<p style="color:var(--sp-success)"><i class="fas fa-check"></i> All parts processed successfully!</p>';
+    }
+
+    // Assembly result card
+    const asmDiv = document.getElementById('assemblyResult');
+    if (job.assembly) {
+        const asm = job.assembly;
+        if (asm.part_id) {
+            let asmHtml = `<div class="sp-asm-result">`;
+            asmHtml += `<h4><i class="fas fa-sitemap"></i> Assembly Created: ${esc(asm.name)}</h4>`;
+            asmHtml += `<p style="margin:.25rem 0;font-size:.9rem">&#9679; <strong>${asm.bom_count}</strong> BOM item(s) linked</p>`;
+            if (asm.errors && asm.errors.length) {
+                asmHtml += `<p style="color:var(--sp-warning);font-size:.85rem;margin:.25rem 0"><i class="fas fa-exclamation-triangle"></i> ${asm.errors.length} warning(s): ${esc(asm.errors.join('; '))}</p>`;
+            }
+            asmHtml += `<a href="${esc(asm.url)}" class="sp-btn sp-btn-success" style="margin-top:.5rem" target="_blank">`;
+            asmHtml += `<i class="fas fa-external-link-alt"></i> Open Assembly in InvenTree</a>`;
+            asmHtml += `</div>`;
+            asmDiv.innerHTML = asmHtml;
+        } else {
+            // Assembly creation failed
+            let errMsg = (asm.errors && asm.errors.length) ? asm.errors.join('; ') : 'Unknown error';
+            asmDiv.innerHTML = `<div style="padding:.75rem;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:8px;color:var(--sp-danger);font-size:.85rem;margin-top:.5rem">`
+                + `<i class="fas fa-times-circle"></i> <strong>Assembly creation failed:</strong> ${esc(errMsg)}</div>`;
+        }
+    } else {
+        asmDiv.innerHTML = '';
+    }
+
+    const dl = document.getElementById('downloadReport');
+    dl.href = 'report/' + currentJobId + '/';
+    dl.style.display = 'inline-flex';
+}
+</script>
+{% endblock %}

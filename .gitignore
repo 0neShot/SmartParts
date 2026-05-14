@@ -1,0 +1,38 @@
+# ── Python ──────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+*.whl
+
+# ── Virtual environments ────────────────────────────────────────────
+venv/
+.venv/
+env/
+
+# ── IDE / Editor ────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ── Environment & Secrets ──────────────────────────────────────────
+.env
+.env.local
+*.sqlite3
+
+# ── InvenTree runtime artifacts ─────────────────────────────────────
+smart_parts_activity.jsonl
+*.log
+media/
+
+# ── OS files ────────────────────────────────────────────────────────
+*.bak
+*.tmp

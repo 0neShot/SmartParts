@@ -1,0 +1,311 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block page_title %}PureScan Command Sheet{% endblock %}
+
+{% block content %}
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap');
+
+/* ═══════════════════════════════════════════════════════════════════
+   PureScan Command Sheet – Strict A4 Print Layout
+   Page 1: Action Codes + Deep Link
+   Page 2: Quantity Codes
+   ═══════════════════════════════════════════════════════════════════ */
+
+:root {
+  --cs-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --cs-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* ── Shared layout ───────────────────────────────────────────────── */
+.cs-wrap {
+  max-width: 210mm; margin: 0 auto; padding: 2rem;
+  font-family: var(--cs-font); color: #1e293b;
+}
+
+/* ── Page containers ─────────────────────────────────────────────── */
+.cs-page {
+  box-sizing: border-box;
+}
+
+/* ── Header ──────────────────────────────────────────────────────── */
+.cs-header { text-align: center; margin-bottom: 1.5rem; }
+.cs-header h1 {
+  font-size: 1.7rem; font-weight: 900; margin: 0 0 .3rem; color: #0f172a;
+}
+.cs-header p {
+  color: #64748b; font-size: .9rem; margin: 0;
+}
+
+/* ── Section titles ──────────────────────────────────────────────── */
+.cs-section-title {
+  font-size: 1rem; font-weight: 700; color: #1e293b;
+  margin: 1.25rem 0 .75rem; padding-bottom: .4rem;
+  border-bottom: 2px solid #e2e8f0;
+  display: flex; align-items: center; gap: .5rem;
+}
+
+/* ── Card grid: 4 columns to fit A4 tightly ──────────────────────── */
+.cs-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .75rem;
+}
+.cs-grid-3col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: .75rem;
+}
+
+/* ── Individual code card ────────────────────────────────────────── */
+.cs-card {
+  border: 1.5px solid #e2e8f0; border-radius: 10px;
+  padding: .6rem; text-align: center;
+  background: #fff; break-inside: avoid;
+  transition: box-shadow .2s, transform .2s;
+}
+.cs-card:hover {
+  box-shadow: 0 6px 20px rgba(0,0,0,.06);
+  transform: translateY(-1px);
+}
+
+/* ── QR image ────────────────────────────────────────────────────── */
+.cs-qr {
+  width: 110px; height: 110px;
+  margin: 0 auto .5rem;
+  display: flex; align-items: center; justify-content: center;
+  background: #f8fafc; border-radius: 6px;
+  overflow: hidden;
+}
+.cs-qr img {
+  width: 100%; height: 100%; image-rendering: pixelated;
+}
+.cs-qr-fallback {
+  font-family: var(--cs-mono);
+  font-size: .8rem; font-weight: 700;
+  color: #1e293b; word-break: break-all;
+  padding: .5rem;
+}
+
+/* ── Label & code ────────────────────────────────────────────────── */
+.cs-label {
+  font-weight: 700; font-size: .85rem;
+  margin-bottom: .15rem; line-height: 1.3;
+}
+.cs-code {
+  font-family: var(--cs-mono);
+  font-size: .68rem; color: #94a3b8;
+  letter-spacing: .03em;
+}
+
+/* ── Deep link card (wider, horizontal) ──────────────────────────── */
+.cs-deeplink {
+  display: flex; align-items: center; gap: 1.25rem;
+  border: 2px solid #6366f1; border-radius: 12px;
+  padding: .75rem 1.25rem; background: #eef2ff;
+  margin-top: 1.25rem;
+}
+.cs-deeplink-qr {
+  width: 100px; height: 100px; flex-shrink: 0;
+  background: #fff; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.cs-deeplink-qr img {
+  width: 100%; height: 100%; image-rendering: pixelated;
+}
+.cs-deeplink-text h3 {
+  margin: 0 0 .25rem; font-size: 1rem; font-weight: 800;
+  color: #4338ca;
+}
+.cs-deeplink-text p {
+  margin: 0; font-size: .82rem; color: #6366f1;
+}
+.cs-deeplink-url {
+  font-family: var(--cs-mono); font-size: .7rem;
+  color: #94a3b8; margin-top: .3rem;
+  word-break: break-all;
+}
+
+/* ── Buttons (screen only) ───────────────────────────────────────── */
+.cs-actions {
+  display: flex; gap: .75rem; justify-content: center;
+  margin-bottom: 1.5rem; flex-wrap: wrap;
+}
+.cs-btn {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: .55rem 1.25rem; border-radius: 8px;
+  font-size: .85rem; font-weight: 600;
+  text-decoration: none; cursor: pointer;
+  border: none; transition: background .2s;
+}
+.cs-btn-primary { background: #6366f1; color: #fff; }
+.cs-btn-primary:hover { background: #4f46e5; }
+.cs-btn-outline {
+  background: #fff; color: #374151;
+  border: 1px solid #d1d5db;
+}
+.cs-btn-outline:hover { background: #f9fafb; }
+
+/* ── Footer ──────────────────────────────────────────────────────── */
+.cs-footer {
+  text-align: center; margin-top: 1.5rem; padding-top: .75rem;
+  border-top: 1px solid #e2e8f0;
+  font-size: .75rem; color: #94a3b8;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   PRINT RULES – Strict A4 two-page layout
+   ═══════════════════════════════════════════════════════════════════ */
+@media print {
+  /* Reset body */
+  body { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+
+  /* Hide screen-only elements */
+  .cs-actions,
+  nav, .navbar, header, footer, .sidebar,
+  #navbar, .breadcrumb-nav { display: none !important; }
+
+  /* Page setup */
+  @page { size: A4 portrait; margin: 12mm 15mm; }
+
+  .cs-wrap { padding: 0; max-width: 100%; }
+
+  /* Each .cs-page = one printed page */
+  .cs-page {
+    page-break-after: always;
+    page-break-inside: avoid;
+    min-height: 0;
+  }
+  .cs-page:last-child { page-break-after: auto; }
+
+  /* Tighter spacing */
+  .cs-header { margin-bottom: 1rem; }
+  .cs-header h1 { font-size: 1.4rem; }
+  .cs-header p { font-size: .8rem; }
+  .cs-section-title { margin: .75rem 0 .5rem; font-size: .9rem; }
+
+  /* Grid: 4 columns, compact cards */
+  .cs-grid { gap: .5rem; }
+  .cs-grid-3col { gap: .5rem; }
+  .cs-card {
+    padding: .4rem; border-width: 1px;
+    box-shadow: none !important; transform: none !important;
+  }
+  .cs-qr { width: 90px; height: 90px; margin-bottom: .35rem; }
+  .cs-label { font-size: .78rem; }
+  .cs-code { font-size: .6rem; }
+
+  /* Deep link */
+  .cs-deeplink { margin-top: .75rem; padding: .5rem 1rem; }
+  .cs-deeplink-qr { width: 80px; height: 80px; }
+  .cs-deeplink-text h3 { font-size: .85rem; }
+  .cs-deeplink-text p { font-size: .72rem; }
+
+  /* Footer per page */
+  .cs-footer { margin-top: .75rem; padding-top: .4rem; font-size: .65rem; }
+}
+</style>
+
+<div class="cs-wrap">
+
+  <!-- Screen-only buttons -->
+  <div class="cs-actions">
+    <button class="cs-btn cs-btn-primary" onclick="window.print()">
+      <i class="fas fa-print"></i> Print Sheet (2 pages)
+    </button>
+    <a class="cs-btn cs-btn-outline" href="/plugin/smartparts/purescan/">
+      <i class="fas fa-crosshairs"></i> PureScan Terminal
+    </a>
+    <a class="cs-btn cs-btn-outline" href="/plugin/smartparts/">
+      <i class="fas fa-arrow-left"></i> Dashboard
+    </a>
+  </div>
+
+  <!-- ═══ PAGE 1: Action Codes + Deep Link ═══════════════════════ -->
+  <div class="cs-page">
+
+    <div class="cs-header">
+      <h1>🎯 PureScan — Command Sheet</h1>
+      <p>Print and place at warehouse workstations. Scan any code to trigger the action.</p>
+    </div>
+
+    <div class="cs-section-title">
+      <i class="fas fa-bolt" style="color:#f59e0b"></i> Action Codes
+    </div>
+    <div class="cs-grid">
+      {% for cmd in action_commands %}
+      <div class="cs-card">
+        <div class="cs-qr">
+          {% if cmd.qr_data_uri %}
+            <img src="{{ cmd.qr_data_uri }}" alt="QR: {{ cmd.code }}">
+          {% else %}
+            <div class="cs-qr-fallback">{{ cmd.code }}</div>
+          {% endif %}
+        </div>
+        <div class="cs-label" style="color:{{ cmd.color }}">
+          {{ cmd.icon }} {{ cmd.label }}
+        </div>
+        <div class="cs-code">{{ cmd.code }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Deep Link QR -->
+    <div class="cs-deeplink">
+      <div class="cs-deeplink-qr">
+        {% if deeplink_qr %}
+          <img src="{{ deeplink_qr }}" alt="QR: PureScan URL">
+        {% else %}
+          <div class="cs-qr-fallback">{{ deeplink_url }}</div>
+        {% endif %}
+      </div>
+      <div class="cs-deeplink-text">
+        <h3>📱 OPEN PURESCAN</h3>
+        <p>Scan this code to open the PureScan Terminal on any device</p>
+        <div class="cs-deeplink-url">{{ deeplink_url }}</div>
+      </div>
+    </div>
+
+    <div class="cs-footer">
+      Page 1 of 2 — Smart Parts Plugin · PureScan Terminal v2.0
+    </div>
+  </div>
+
+  <!-- ═══ PAGE 2: Quantity Codes ═════════════════════════════════ -->
+  <div class="cs-page">
+
+    <div class="cs-header">
+      <h1># Quantity Codes</h1>
+      <p>Scan to set the quantity for Add, Remove, or Stocktake actions. Multiple scans accumulate.</p>
+    </div>
+
+    <div class="cs-section-title">
+      <i class="fas fa-hashtag" style="color:#6b7280"></i> Quantity Codes
+    </div>
+    <div class="cs-grid-3col">
+      {% for cmd in qty_commands %}
+      <div class="cs-card">
+        <div class="cs-qr">
+          {% if cmd.qr_data_uri %}
+            <img src="{{ cmd.qr_data_uri }}" alt="QR: {{ cmd.code }}">
+          {% else %}
+            <div class="cs-qr-fallback">{{ cmd.code }}</div>
+          {% endif %}
+        </div>
+        <div class="cs-label" style="color:{{ cmd.color }}">
+          {{ cmd.label }}
+        </div>
+        <div class="cs-code">{{ cmd.code }}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="cs-footer">
+      Page 2 of 2 — Smart Parts Plugin · PureScan Terminal v2.0
+    </div>
+  </div>
+
+</div>
+{% endblock %}

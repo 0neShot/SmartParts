@@ -1,0 +1,635 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block page_title %}{% trans "Settings" %} | Smart Parts{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --sp-primary: #6366f1;
+        --sp-primary-hover: #4f46e5;
+        --sp-success: #10b981;
+        --sp-warning: #f59e0b;
+        --sp-danger: #ef4444;
+        --sp-info: #3b82f6;
+        --sp-border: #e5e7eb;
+        --sp-text-muted: #6b7280;
+        --sp-gradient: linear-gradient(135deg, #6366f1, #8b5cf6, #a78bfa);
+        --sp-shadow: 0 4px 6px -1px rgba(0, 0, 0, .1);
+        --sp-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, .1)
+    }
+
+    .sp-wrap {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 1.5rem
+    }
+
+    .sp-header {
+        background: var(--sp-gradient);
+        border-radius: 16px;
+        padding: 2rem 2.5rem;
+        margin-bottom: 2rem;
+        color: #fff;
+        box-shadow: var(--sp-shadow-lg)
+    }
+
+    .sp-header h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin: 0 0 .25rem
+    }
+
+    .sp-header p {
+        margin: 0;
+        opacity: .85;
+        font-size: .9rem
+    }
+
+    .sp-card {
+        background: #fff;
+        border: 1px solid var(--sp-border);
+        border-radius: 12px;
+        box-shadow: var(--sp-shadow);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem
+    }
+
+    .sp-card h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0 0 1rem;
+        display: flex;
+        align-items: center;
+        gap: .5rem
+    }
+
+    .sp-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        padding: .5rem 1rem;
+        border: none;
+        border-radius: 8px;
+        font-size: .85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all .2s;
+        text-decoration: none
+    }
+
+    .sp-btn-primary {
+        background: var(--sp-primary);
+        color: #fff
+    }
+
+    .sp-btn-primary:hover {
+        background: var(--sp-primary-hover)
+    }
+
+    .sp-btn-success {
+        background: var(--sp-success);
+        color: #fff
+    }
+
+    .sp-btn-outline {
+        background: transparent;
+        color: var(--sp-primary);
+        border: 2px solid var(--sp-primary)
+    }
+
+    .sp-provider {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1rem;
+        border: 1px solid var(--sp-border);
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        transition: all .2s
+    }
+
+    .sp-provider:hover {
+        border-color: var(--sp-primary);
+        box-shadow: var(--sp-shadow)
+    }
+
+    .sp-provider-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem
+    }
+
+    .sp-provider-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #fff
+    }
+
+    .sp-provider-icon.mouser {
+        background: linear-gradient(135deg, #003087, #0056b3)
+    }
+
+    .sp-provider-icon.digikey {
+        background: linear-gradient(135deg, #cc0000, #ff3333)
+    }
+
+    .sp-provider-icon.lcsc {
+        background: linear-gradient(135deg, #0066cc, #3399ff)
+    }
+
+    .sp-provider-name {
+        font-weight: 600;
+        font-size: 1rem
+    }
+
+    .sp-provider-status {
+        font-size: .8rem;
+        color: var(--sp-text-muted)
+    }
+
+    .sp-test-result {
+        margin-top: .5rem;
+        padding: .5rem .75rem;
+        border-radius: 6px;
+        font-size: .85rem;
+        display: none
+    }
+
+    .sp-test-result.success {
+        display: block;
+        background: rgba(16, 185, 129, .08);
+        color: var(--sp-success);
+        border: 1px solid rgba(16, 185, 129, .2)
+    }
+
+    .sp-test-result.error {
+        display: block;
+        background: rgba(239, 68, 68, .08);
+        color: var(--sp-danger);
+        border: 1px solid rgba(239, 68, 68, .2)
+    }
+
+    .sp-info-box {
+        background: rgba(59, 130, 246, .06);
+        border: 1px solid rgba(59, 130, 246, .15);
+        border-radius: 8px;
+        padding: 1rem;
+        font-size: .85rem;
+        color: #1e40af;
+        margin-bottom: 1rem
+    }
+
+    .sp-btn-danger-ghost {
+        background: rgba(239, 68, 68, .08);
+        color: var(--sp-danger);
+        border: 1px solid rgba(239, 68, 68, .25);
+        border-radius: 6px;
+        padding: .3rem .6rem;
+        cursor: pointer;
+        font-size: .85rem;
+        transition: all .15s;
+        line-height: 1
+    }
+
+    .sp-btn-danger-ghost:hover {
+        background: rgba(239, 68, 68, .18);
+        border-color: var(--sp-danger)
+    }
+</style>
+
+<div class="sp-wrap">
+    <div class="sp-header">
+        <h1><i class="fas fa-cogs"></i> API Settings</h1>
+        <p>Configure distributor API credentials and test connections. Settings are saved in InvenTree's plugin
+            settings.</p>
+    </div>
+
+    <div class="sp-info-box">
+        <i class="fas fa-info-circle"></i> <strong>Note:</strong> API keys are stored in InvenTree's built-in plugin
+        settings system.
+        To change values, go to <a href="/web/settings/system/plugins"
+            style="color:inherit;text-decoration:underline">InvenTree Settings &mdash; Plugins &mdash; SmartParts</a>.
+        This page lets you <strong>test connections</strong> with your current configuration.
+    </div>
+
+    <!-- Mouser -->
+    <div class="sp-card">
+        <h3><i class="fas fa-plug" style="color:var(--sp-primary)"></i> API Providers</h3>
+
+        <div class="sp-provider">
+            <div class="sp-provider-info">
+                <div class="sp-provider-icon mouser">M</div>
+                <div>
+                    <div class="sp-provider-name">Mouser Electronics</div>
+                    <div class="sp-provider-status">
+                        {% if mouser_enabled %}
+                        <span style="color:var(--sp-success)">&#9679; Enabled</span>
+                        {% if mouser_has_key %} &ndash; Key configured{% else %} &ndash; <span
+                            style="color:var(--sp-warning)">No API key</span>{% endif %}
+                        {% else %}
+                        <span style="color:var(--sp-text-muted)">&#9679; Disabled</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <button class="sp-btn sp-btn-outline" onclick="testApi('mouser', this)"><i class="fas fa-bolt"></i>
+                Test</button>
+        </div>
+        <div class="sp-test-result" id="test-mouser"></div>
+
+        <div class="sp-provider">
+            <div class="sp-provider-info">
+                <div class="sp-provider-icon digikey">DK</div>
+                <div>
+                    <div class="sp-provider-name">DigiKey</div>
+                    <div class="sp-provider-status">
+                        {% if digikey_enabled %}
+                        <span style="color:var(--sp-success)">&#9679; Enabled</span>
+                        {% if digikey_has_key %} &ndash; OAuth2 configured{% else %} &ndash; <span
+                            style="color:var(--sp-warning)">No credentials</span>{% endif %}
+                        {% else %}
+                        <span style="color:var(--sp-text-muted)">&#9679; Disabled</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <button class="sp-btn sp-btn-outline" onclick="testApi('digikey', this)"><i class="fas fa-bolt"></i>
+                Test</button>
+        </div>
+        <div class="sp-test-result" id="test-digikey"></div>
+
+        <div class="sp-provider">
+            <div class="sp-provider-info">
+                <div class="sp-provider-icon lcsc">LC</div>
+                <div>
+                    <div class="sp-provider-name">LCSC Electronics</div>
+                    <div class="sp-provider-status">
+                        {% if lcsc_enabled %}
+                        <span style="color:var(--sp-success)">&#9679; Enabled &ndash; No API key required</span>
+                        {% else %}
+                        <span style="color:var(--sp-text-muted)">&#9679; Disabled</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <button class="sp-btn sp-btn-outline" onclick="testApi('lcsc', this)"><i class="fas fa-bolt"></i>
+                Test</button>
+        </div>
+        <div class="sp-test-result" id="test-lcsc"></div>
+    </div>
+
+    <!-- Learned Category Mappings -->
+    <div class="sp-card">
+        <h3><i class="fas fa-brain" style="color:var(--sp-success)"></i> Learned Category Mappings</h3>
+        <p style="font-size:.85rem;color:var(--sp-text-muted);margin:0 0 1rem">
+            These mappings are built automatically when you correct a category during import.
+            Each entry acts as a <strong>100% confidence override</strong> &mdash; the distributor's exact category
+            string
+            is instantly resolved to your chosen InvenTree category path, bypassing fuzzy matching entirely.
+            Edit or remove entries here to fix incorrect learning.
+        </p>
+
+        <div id="learnedRows" style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:.75rem"></div>
+
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem">
+            <button class="sp-btn sp-btn-outline" onclick="addLearnedRow('','')">
+                <i class="fas fa-plus"></i> Add Entry
+            </button>
+            <button class="sp-btn sp-btn-primary" id="saveLearnedBtn" onclick="saveLearned()">
+                <i class="fas fa-save"></i> Save Mappings
+            </button>
+        </div>
+        <div id="learnedStatus" style="font-size:.85rem;display:none"></div>
+
+        <div id="learnedEmpty"
+            style="font-size:.85rem;color:var(--sp-text-muted);display:none;padding:.75rem;border:1px dashed var(--sp-border);border-radius:8px;text-align:center">
+            <i class="fas fa-info-circle"></i> No learned mappings yet.
+            They are created automatically when you manually select a different category than what the matcher
+            suggested.
+        </div>
+
+        <details style="margin-top:.75rem">
+            <summary style="font-size:.8rem;cursor:pointer;color:var(--sp-text-muted)">Raw JSON (advanced edit)
+            </summary>
+            <textarea id="learnedJson" rows="5"
+                style="width:100%;margin-top:.5rem;padding:.5rem;border:1px solid var(--sp-border);border-radius:6px;font-family:monospace;font-size:.8rem;resize:vertical"
+                oninput="syncLearnedJsonToRows()">{}</textarea>
+        </details>
+    </div>
+
+    <!-- Category Synonym Engine (Advanced) -->
+    <details style="margin-bottom:1.5rem">
+        <summary
+            style="cursor:pointer;padding:.75rem 1rem;background:#fff;border:1px solid var(--sp-border);border-radius:12px;font-weight:600;font-size:.95rem;list-style:none;display:flex;align-items:center;gap:.5rem">
+            <i class="fas fa-exchange-alt" style="color:var(--sp-warning)"></i>
+            Advanced: Category Synonym Engine
+            <span style="margin-left:auto;font-size:.75rem;color:var(--sp-text-muted);font-weight:400">Aliases for the
+                fuzzy matcher &mdash; click to expand</span>
+        </summary>
+        <div class="sp-card" style="border-top-left-radius:0;border-top-right-radius:0;margin-top:0;border-top:none">
+            <p style="font-size:.85rem;color:var(--sp-text-muted);margin:0 0 1rem">
+                Define custom aliases so the fuzzy category matcher understands your distributor's jargon.
+                <strong>From</strong> = distributor term &nbsp;&rarr;&nbsp; <strong>To</strong> = your InvenTree
+                equivalent
+                keyword.
+                Built-in synonyms (MLCC, MCU, LDO, etc.) are always active.
+            </p>
+
+            <div id="synonymRows" style="display:flex;flex-direction:column;gap:.5rem;margin-bottom:.75rem"></div>
+
+            <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem">
+                <button class="sp-btn sp-btn-outline" onclick="addSynonymRow('','')">
+                    <i class="fas fa-plus"></i> Add Row
+                </button>
+                <button class="sp-btn sp-btn-primary" id="saveSynonymsBtn" onclick="saveSynonyms()">
+                    <i class="fas fa-save"></i> Save Synonyms
+                </button>
+            </div>
+            <div id="synonymStatus" style="font-size:.85rem;display:none"></div>
+
+            <details style="margin-top:.5rem">
+                <summary style="font-size:.8rem;cursor:pointer;color:var(--sp-text-muted)">Raw JSON (advanced)</summary>
+                <textarea id="synonymJson" rows="4"
+                    style="width:100%;margin-top:.5rem;padding:.5rem;border:1px solid var(--sp-border);border-radius:6px;font-family:monospace;font-size:.8rem;resize:vertical"
+                    oninput="syncJsonToRows()">{}</textarea>
+            </details>
+        </div>
+    </details>
+
+
+    <!-- Quick Links -->
+    <div class="sp-card">
+        <h3><i class="fas fa-link" style="color:var(--sp-info)"></i> Quick Links</h3>
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+            <a href="/web/settings/system/plugins" class="sp-btn sp-btn-primary"><i class="fas fa-sliders-h"></i> Edit
+                All Settings</a>
+            <a href="../" class="sp-btn sp-btn-outline"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
+            <a href="../logs/" class="sp-btn sp-btn-outline"><i class="fas fa-list-alt"></i> View Logs</a>
+        </div>
+    </div>
+</div>
+
+<script>
+    function getCookie(n) { let v = document.cookie.match('(^|;)\\s*' + n + '\\s*=\\s*([^;]+)'); return v ? v.pop() : ''; }
+
+    function testApi(provider, btn) {
+        const el = document.getElementById('test-' + provider);
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+        el.className = 'sp-test-result';
+        el.style.display = 'none';
+
+        fetch('../api/test-connection/' + provider + '/', {
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+            .then(r => r.json())
+            .then(data => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-bolt"></i> Test';
+                el.style.display = 'block';
+                if (data.success) {
+                    el.className = 'sp-test-result success';
+                    el.innerHTML = '<i class="fas fa-check-circle"></i> ' + data.message;
+                } else {
+                    el.className = 'sp-test-result error';
+                    el.innerHTML = '<i class="fas fa-times-circle"></i> ' + data.message;
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-bolt"></i> Test';
+                el.style.display = 'block';
+                el.className = 'sp-test-result error';
+                el.innerHTML = '<i class="fas fa-times-circle"></i> Request failed: ' + err.message;
+            });
+    }
+
+    function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+    // -- Learned Category Mappings --
+
+    function addLearnedRow(distCat, invPath) {
+        const container = document.getElementById('learnedRows');
+        document.getElementById('learnedEmpty').style.display = 'none';
+        const row = document.createElement('div');
+        row.style.cssText = 'display:grid;grid-template-columns:1fr auto 1fr auto;gap:.5rem;align-items:center';
+        row.innerHTML = `
+        <input type="text" placeholder="Distributor category (exact string)" value="${esc(distCat)}"
+            style="padding:.4rem .6rem;border:1px solid var(--sp-border);border-radius:6px;font-size:.82rem;font-family:monospace"
+            oninput="syncLearnedRowsToJson()">
+        <span style="color:var(--sp-text-muted);font-size:.85rem;white-space:nowrap">&rarr; InvenTree</span>
+        <input type="text" placeholder="InvenTree category path" value="${esc(invPath)}"
+            style="padding:.4rem .6rem;border:1px solid var(--sp-border);border-radius:6px;font-size:.85rem"
+            oninput="syncLearnedRowsToJson()">
+        <button class="sp-btn-danger-ghost"
+            onclick="this.closest('div').remove();syncLearnedRowsToJson();checkLearnedEmpty()"
+            title="Remove this mapping">
+            <i class="fas fa-times"></i>
+        </button>`;
+        container.appendChild(row);
+    }
+
+    function checkLearnedEmpty() {
+        const rows = document.querySelectorAll('#learnedRows > div');
+        document.getElementById('learnedEmpty').style.display = rows.length === 0 ? 'block' : 'none';
+    }
+
+    function syncLearnedRowsToJson() {
+        const rows = document.querySelectorAll('#learnedRows > div');
+        const obj = {};
+        rows.forEach(row => {
+            const inputs = row.querySelectorAll('input');
+            const k = inputs[0]?.value.trim();
+            const v = inputs[1]?.value.trim();
+            if (k && v) obj[k] = v;
+        });
+        document.getElementById('learnedJson').value = JSON.stringify(obj, null, 2);
+    }
+
+    function syncLearnedJsonToRows() {
+        const raw = document.getElementById('learnedJson').value;
+        try {
+            const obj = JSON.parse(raw);
+            const container = document.getElementById('learnedRows');
+            container.innerHTML = '';
+            Object.entries(obj).forEach(([k, v]) => addLearnedRow(k, v));
+            checkLearnedEmpty();
+        } catch (e) { /* invalid JSON - don't update rows */ }
+    }
+
+    function saveLearned() {
+        syncLearnedRowsToJson();
+        const json = document.getElementById('learnedJson').value;
+        try { JSON.parse(json); } catch (e) {
+            showLearnedStatus('error', 'Invalid JSON: ' + e.message);
+            return;
+        }
+        const btn = document.getElementById('saveLearnedBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+        fetch('../api/settings/learned/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({ value: json }),
+        })
+            .then(r => r.ok ? r.json() : r.json().then(d => Promise.reject(d.error || 'HTTP ' + r.status)))
+            .then(() => {
+                showLearnedStatus('success', '<i class="fas fa-check-circle"></i> Learned mappings saved successfully');
+            })
+            .catch(err => {
+                showLearnedStatus('error', '<i class="fas fa-times-circle"></i> Save failed: ' + err);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> Save Mappings';
+            });
+    }
+
+    function showLearnedStatus(type, html) {
+        const el = document.getElementById('learnedStatus');
+        el.style.display = 'block';
+        el.style.color = type === 'success' ? 'var(--sp-success)' : 'var(--sp-danger)';
+        el.innerHTML = html;
+        setTimeout(() => { el.style.display = 'none'; }, 4000);
+    }
+
+    // Load learned mappings on page load
+    (function loadLearnedMappings() {
+        fetch('../api/settings/learned/', {
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data) return;
+                const value = data.value || '{}';
+                document.getElementById('learnedJson').value = value;
+                try {
+                    const obj = JSON.parse(value);
+                    const entries = Object.entries(obj);
+                    if (entries.length === 0) {
+                        document.getElementById('learnedEmpty').style.display = 'block';
+                    } else {
+                        entries.forEach(([k, v]) => addLearnedRow(k, v));
+                    }
+                } catch (e) {
+                    document.getElementById('learnedEmpty').style.display = 'block';
+                }
+            })
+            .catch(() => {
+                document.getElementById('learnedEmpty').style.display = 'block';
+            });
+    })();
+
+    // -- Synonym Engine --
+
+    function addSynonymRow(fromVal, toVal) {
+        const container = document.getElementById('synonymRows');
+        const row = document.createElement('div');
+        row.style.cssText = 'display:grid;grid-template-columns:1fr auto 1fr auto;gap:.5rem;align-items:center';
+        row.innerHTML = `
+        <input type="text" placeholder="Distributor term (e.g. MLCC)" value="${esc(fromVal)}"
+            style="padding:.4rem .6rem;border:1px solid var(--sp-border);border-radius:6px;font-size:.85rem"
+            oninput="syncRowsToJson()">
+        <span style="color:var(--sp-text-muted);font-size:.85rem">&rarr;</span>
+        <input type="text" placeholder="InvenTree equivalent (e.g. Ceramic Capacitor)" value="${esc(toVal)}"
+            style="padding:.4rem .6rem;border:1px solid var(--sp-border);border-radius:6px;font-size:.85rem"
+            oninput="syncRowsToJson()">
+        <button onclick="this.closest('div').remove();syncRowsToJson()"
+            style="padding:.3rem .5rem;border:none;background:rgba(239,68,68,.1);color:var(--sp-danger);border-radius:6px;cursor:pointer">
+            <i class="fas fa-times"></i>
+        </button>`;
+        container.appendChild(row);
+    }
+
+    function syncRowsToJson() {
+        const rows = document.querySelectorAll('#synonymRows > div');
+        const obj = {};
+        rows.forEach(row => {
+            const inputs = row.querySelectorAll('input');
+            const k = inputs[0]?.value.trim();
+            const v = inputs[1]?.value.trim();
+            if (k && v) obj[k] = v;
+        });
+        document.getElementById('synonymJson').value = JSON.stringify(obj, null, 2);
+    }
+
+    function syncJsonToRows() {
+        const raw = document.getElementById('synonymJson').value;
+        try {
+            const obj = JSON.parse(raw);
+            const container = document.getElementById('synonymRows');
+            container.innerHTML = '';
+            Object.entries(obj).forEach(([k, v]) => addSynonymRow(k, v));
+        } catch (e) { /* invalid JSON - don't update rows */ }
+    }
+
+    function saveSynonyms() {
+        syncRowsToJson();
+        const json = document.getElementById('synonymJson').value;
+        try { JSON.parse(json); } catch (e) {
+            showSynonymStatus('error', 'Invalid JSON: ' + e.message);
+            return;
+        }
+        const btn = document.getElementById('saveSynonymsBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+
+        fetch('../api/settings/synonyms/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({ value: json }),
+        })
+            .then(r => r.ok ? r.json() : Promise.reject('HTTP ' + r.status))
+            .then(() => {
+                showSynonymStatus('success', '<i class="fas fa-check-circle"></i> Synonyms saved successfully');
+            })
+            .catch(err => {
+                showSynonymStatus('error', '<i class="fas fa-times-circle"></i> Save failed: ' + err);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> Save Synonyms';
+            });
+    }
+
+    function showSynonymStatus(type, html) {
+        const el = document.getElementById('synonymStatus');
+        el.style.display = 'block';
+        el.style.color = type === 'success' ? 'var(--sp-success)' : 'var(--sp-danger)';
+        el.innerHTML = html;
+        setTimeout(() => { el.style.display = 'none'; }, 4000);
+    }
+
+    // Load current synonyms on page load
+    (function loadSynonyms() {
+        fetch('../api/settings/synonyms/', {
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data) return;
+                const value = data.value || '{}';
+                document.getElementById('synonymJson').value = value;
+                try {
+                    const obj = JSON.parse(value);
+                    Object.entries(obj).forEach(([k, v]) => addSynonymRow(k, v));
+                } catch (e) { }
+            })
+            .catch(() => { });
+    })();
+</script>
+{% endblock %}

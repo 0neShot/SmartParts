@@ -1,0 +1,688 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block page_title %}PureScan Terminal | Smart Parts{% endblock %}
+
+{% block content %}
+<input type="hidden" id="ps-csrf" value="{{ csrf_token }}">
+
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   PureScan v2 – Zero-Click Warehouse Terminal
+   ═══════════════════════════════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&family=JetBrains+Mono:wght@500;700&display=swap');
+
+:root {
+  --ps-font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --ps-mono: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Full-screen overlay */
+.ps-terminal {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; flex-direction: column;
+  font-family: var(--ps-font);
+  transition: background .4s ease, color .4s ease;
+  overflow: hidden;
+  -webkit-user-select: none; user-select: none;
+}
+
+/* ── State-driven backgrounds ─────────────────────────────────── */
+.ps-terminal[data-state="IDLE"] {
+  background: linear-gradient(160deg, #0f172a 0%, #1e293b 40%, #334155 100%);
+  color: #e2e8f0;
+}
+.ps-terminal[data-state="AWAITING_ITEM"],
+.ps-terminal[data-state="AWAITING_PARAM"] {
+  background: linear-gradient(160deg, #78350f 0%, #92400e 30%, #b45309 100%);
+  color: #fffbeb;
+}
+.ps-terminal[data-state="COMBO"] {
+  background: linear-gradient(160deg, #78350f 0%, #d97706 40%, #f59e0b 100%);
+  color: #fffbeb;
+}
+.ps-terminal[data-state="PROCESSING"] {
+  background: linear-gradient(160deg, #1e3a5f 0%, #1e40af 40%, #3b82f6 100%);
+  color: #dbeafe;
+}
+.ps-terminal[data-state="SUCCESS"] {
+  background: linear-gradient(160deg, #064e3b 0%, #065f46 40%, #059669 100%);
+  color: #d1fae5;
+}
+.ps-terminal[data-state="ERROR"] {
+  background: linear-gradient(160deg, #7f1d1d 0%, #991b1b 40%, #dc2626 100%);
+  color: #fee2e2;
+}
+
+/* ── Top bar ──────────────────────────────────────────────────── */
+.ps-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .75rem 2rem;
+  background: rgba(0,0,0,.15); backdrop-filter: blur(8px);
+  flex-shrink: 0;
+}
+.ps-logo {
+  font-size: 1.1rem; font-weight: 700; letter-spacing: .5px;
+  display: flex; align-items: center; gap: .5rem; opacity: .9;
+}
+.ps-logo i { font-size: 1.3rem; }
+.ps-clock { font-family: var(--ps-mono); font-size: 1rem; opacity: .7; }
+.ps-exit-btn {
+  background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+  color: inherit; padding: .45rem 1rem; border-radius: 8px;
+  font-size: .85rem; font-weight: 600; cursor: pointer;
+  transition: background .2s; text-decoration: none;
+}
+.ps-exit-btn:hover { background: rgba(255,255,255,.25); }
+
+/* ── State badge ──────────────────────────────────────────────── */
+.ps-state-badge { text-align: center; padding: 1rem 2rem .25rem; flex-shrink: 0; }
+.ps-state-label {
+  display: inline-block; font-family: var(--ps-mono);
+  font-size: .9rem; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; padding: .35rem 1.5rem;
+  border-radius: 999px; background: rgba(255,255,255,.15);
+}
+
+/* ── Content layout (main + sidebar) ─────────────────────────── */
+.ps-body { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+
+.ps-main {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 1.5rem 3rem; text-align: center;
+  overflow-y: auto;
+}
+
+/* ── Action log sidebar ──────────────────────────────────────── */
+.ps-sidebar {
+  width: 320px; flex-shrink: 0;
+  background: rgba(0,0,0,.2); backdrop-filter: blur(8px);
+  border-left: 1px solid rgba(255,255,255,.08);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.ps-sidebar-title {
+  padding: .75rem 1rem; font-size: .85rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1px; opacity: .6;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.ps-clear-btn {
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.12);
+  color: inherit; padding: .3rem .6rem; border-radius: 6px;
+  font-size: .75rem; cursor: pointer; opacity: .6;
+  transition: opacity .2s, background .2s;
+}
+.ps-clear-btn:hover { opacity: 1; background: rgba(239,68,68,.25); }
+.ps-log-list {
+  flex: 1; overflow-y: auto; padding: .5rem;
+}
+.ps-log-entry {
+  padding: .6rem .75rem; margin-bottom: .35rem;
+  border-radius: 8px; font-size: .8rem; line-height: 1.4;
+  background: rgba(255,255,255,.05);
+  border-left: 3px solid rgba(255,255,255,.15);
+  transition: background .2s;
+}
+.ps-log-entry:hover { background: rgba(255,255,255,.1); }
+.ps-log-entry.undone {
+  opacity: .4; text-decoration: line-through;
+  border-left-color: rgba(255,255,255,.06);
+}
+.ps-log-entry.undo-entry {
+  border-left-color: #f59e0b; opacity: .8;
+  font-style: italic;
+}
+.ps-log-time {
+  font-family: var(--ps-mono); font-size: .7rem;
+  opacity: .5; margin-bottom: .2rem;
+}
+.ps-log-empty {
+  text-align: center; padding: 2rem 1rem;
+  opacity: .3; font-size: .85rem;
+}
+
+/* ── Animated icon ───────────────────────────────────────────── */
+.ps-icon {
+  font-size: 4.5rem; margin-bottom: 1.25rem;
+  animation: ps-pulse 2s ease-in-out infinite;
+}
+@keyframes ps-pulse {
+  0%, 100% { transform: scale(1); opacity: .9; }
+  50%      { transform: scale(1.08); opacity: 1; }
+}
+.ps-terminal[data-state="SUCCESS"] .ps-icon,
+.ps-terminal[data-state="ERROR"]   .ps-icon {
+  animation: ps-pop .4s ease-out;
+}
+@keyframes ps-pop {
+  0% { transform: scale(0); } 60% { transform: scale(1.2); } 100% { transform: scale(1); }
+}
+
+/* Detail text */
+.ps-detail {
+  font-size: 2rem; font-weight: 700; line-height: 1.4;
+  max-width: 850px; white-space: pre-line;
+  text-shadow: 0 2px 8px rgba(0,0,0,.2);
+}
+.ps-detail-sub {
+  font-size: 1rem; font-weight: 400; opacity: .7; margin-top: .75rem;
+}
+
+/* ── IDLE action hints ───────────────────────────────────────── */
+.ps-actions-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: .75rem; width: 100%; max-width: 850px; margin-top: 1.5rem;
+}
+.ps-action-hint {
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px; padding: 1rem .75rem; text-align: center;
+  transition: transform .2s, background .2s;
+}
+.ps-action-hint:hover { background: rgba(255,255,255,.12); transform: translateY(-2px); }
+.ps-action-hint i { font-size: 1.8rem; display: block; margin-bottom: .4rem; opacity: .8; }
+.ps-action-hint .ps-hint-name { font-weight: 700; font-size: 1rem; margin-bottom: .2rem; }
+.ps-action-hint .ps-hint-code { font-family: var(--ps-mono); font-size: .75rem; opacity: .5; }
+
+/* ── Combo progress bar ──────────────────────────────────────── */
+.ps-combo-bar {
+  width: 300px; height: 6px; background: rgba(255,255,255,.15);
+  border-radius: 3px; margin-top: 1rem; overflow: hidden;
+}
+.ps-combo-fill {
+  height: 100%; background: #fbbf24; border-radius: 3px;
+  animation: ps-combo-drain 3s linear forwards;
+}
+@keyframes ps-combo-drain {
+  from { width: 100%; } to { width: 0%; }
+}
+.ps-combo-qty {
+  font-size: 5rem; font-weight: 900; font-family: var(--ps-mono);
+  color: #fbbf24; text-shadow: 0 4px 15px rgba(0,0,0,.3);
+  margin-bottom: .5rem;
+}
+
+/* ── Rich info card ──────────────────────────────────────────── */
+.ps-info-card {
+  background: rgba(255,255,255,.08); border-radius: 16px;
+  padding: 1.5rem 2rem; max-width: 700px; width: 100%;
+  text-align: left;
+}
+.ps-info-header {
+  display: flex; align-items: center; gap: 1.25rem;
+  margin-bottom: 1rem; padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+}
+.ps-info-img {
+  width: 80px; height: 80px; border-radius: 12px;
+  background: rgba(255,255,255,.1); object-fit: contain;
+  flex-shrink: 0;
+}
+.ps-info-img-placeholder {
+  width: 80px; height: 80px; border-radius: 12px;
+  background: rgba(255,255,255,.06);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; opacity: .4; flex-shrink: 0;
+}
+.ps-info-name { font-size: 1.6rem; font-weight: 800; line-height: 1.3; }
+.ps-info-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: .5rem .75rem; margin-bottom: 1rem;
+}
+.ps-info-label {
+  font-size: .75rem; text-transform: uppercase;
+  letter-spacing: .06em; opacity: .5; margin-bottom: .1rem;
+}
+.ps-info-val {
+  font-size: 1.1rem; font-weight: 600;
+  font-family: var(--ps-mono);
+}
+.ps-tracking-title {
+  font-size: .8rem; text-transform: uppercase;
+  letter-spacing: .06em; opacity: .5; margin-bottom: .5rem;
+}
+.ps-track-entry {
+  background: rgba(255,255,255,.05); border-radius: 8px;
+  padding: .5rem .75rem; margin-bottom: .35rem; font-size: .82rem;
+  border-left: 3px solid rgba(255,255,255,.15);
+}
+.ps-track-date {
+  font-family: var(--ps-mono); font-size: .7rem; opacity: .5;
+}
+.ps-track-user { opacity: .7; }
+
+/* ── Scan history strip ──────────────────────────────────────── */
+.ps-history {
+  display: flex; gap: .5rem; padding: .6rem 2rem;
+  background: rgba(0,0,0,.15); overflow-x: auto;
+  backdrop-filter: blur(8px); flex-shrink: 0;
+}
+.ps-history-item {
+  flex-shrink: 0; font-size: .72rem; font-family: var(--ps-mono);
+  padding: .25rem .6rem; border-radius: 6px;
+  background: rgba(255,255,255,.08); opacity: .6;
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ps-history-item:last-child { opacity: 1; }
+
+/* ── Spinner ─────────────────────────────────────────────────── */
+.ps-spinner {
+  width: 55px; height: 55px;
+  border: 4px solid rgba(255,255,255,.2);
+  border-top-color: rgba(255,255,255,.9);
+  border-radius: 50%; animation: ps-spin .8s linear infinite;
+  margin-bottom: 1.25rem;
+}
+@keyframes ps-spin { to { transform: rotate(360deg); } }
+
+/* ── Location inventory card ─────────────────────────────────── */
+.ps-loc-card {
+  background: rgba(255,255,255,.08); border-radius: 16px;
+  padding: 1.5rem 2rem; max-width: 800px; width: 100%;
+  text-align: left;
+}
+.ps-loc-header {
+  display: flex; align-items: center; gap: 1rem;
+  margin-bottom: 1rem; padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+}
+.ps-loc-icon {
+  width: 60px; height: 60px; border-radius: 12px;
+  background: rgba(255,255,255,.1);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.8rem; flex-shrink: 0;
+}
+.ps-loc-name { font-size: 1.5rem; font-weight: 800; line-height: 1.2; }
+.ps-loc-path {
+  font-size: .85rem; opacity: .6;
+  font-family: var(--ps-mono); margin-top: .15rem;
+}
+.ps-loc-stats {
+  display: flex; gap: 1.5rem; margin-bottom: 1rem;
+  font-size: .85rem; opacity: .7;
+}
+.ps-loc-stats span { font-weight: 700; }
+.ps-loc-table-wrap {
+  max-height: 350px; overflow-y: auto; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.08);
+}
+.ps-loc-table {
+  width: 100%; border-collapse: collapse; font-size: .88rem;
+}
+.ps-loc-table th {
+  position: sticky; top: 0; z-index: 1;
+  background: rgba(0,0,0,.3); backdrop-filter: blur(6px);
+  text-align: left; padding: .6rem .75rem;
+  font-size: .75rem; text-transform: uppercase;
+  letter-spacing: .06em; opacity: .6;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+}
+.ps-loc-table td {
+  padding: .55rem .75rem;
+  border-bottom: 1px solid rgba(255,255,255,.04);
+  vertical-align: middle;
+}
+.ps-loc-table tbody tr {
+  transition: background .15s;
+}
+.ps-loc-table tbody tr:hover {
+  background: rgba(255,255,255,.06);
+}
+.ps-loc-item-cell {
+  display: flex; align-items: center; gap: .6rem;
+}
+.ps-loc-thumb {
+  width: 32px; height: 32px; border-radius: 6px;
+  background: rgba(255,255,255,.06); object-fit: contain;
+  flex-shrink: 0;
+}
+.ps-loc-thumb-empty {
+  width: 32px; height: 32px; border-radius: 6px;
+  background: rgba(255,255,255,.04);
+  display: flex; align-items: center; justify-content: center;
+  font-size: .8rem; opacity: .3; flex-shrink: 0;
+}
+.ps-loc-qty {
+  font-family: var(--ps-mono); font-weight: 700; font-size: .95rem;
+}
+.ps-loc-empty {
+  text-align: center; padding: 2rem 1rem;
+  opacity: .4; font-size: .9rem;
+}
+</style>
+
+<!-- ═══ Terminal UI ═══════════════════════════════════════════════════════ -->
+<div class="ps-terminal" id="psTerminal" data-state="IDLE">
+
+  <!-- Top bar -->
+  <div class="ps-topbar">
+    <div class="ps-logo">
+      <i class="fas fa-crosshairs"></i> PureScan Terminal
+    </div>
+    <div class="ps-clock" id="psClock"></div>
+    <div style="display:flex;gap:.5rem;">
+      <a class="ps-exit-btn" href="/plugin/smartparts/purescan/commands/" target="_blank">
+        <i class="fas fa-qrcode"></i> Commands
+      </a>
+      <a class="ps-exit-btn" href="/plugin/smartparts/">
+        <i class="fas fa-arrow-left"></i> Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- State badge -->
+  <div class="ps-state-badge">
+    <span class="ps-state-label" id="psStateLabel">IDLE</span>
+  </div>
+
+  <!-- Body: main + sidebar -->
+  <div class="ps-body">
+    <!-- Main content -->
+    <div class="ps-main" id="psMain"></div>
+
+    <!-- Action Log sidebar -->
+    <div class="ps-sidebar">
+      <div class="ps-sidebar-title">
+        <span><i class="fas fa-history"></i> Action Log</span>
+        <button class="ps-clear-btn" onclick="PureScan.clearLog()" title="Clear action log">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+      </div>
+      <div class="ps-log-list" id="psLogList">
+        <div class="ps-log-empty">No actions yet.<br>Scan to begin.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scan history strip -->
+  <div class="ps-history" id="psHistory"></div>
+</div>
+
+<!-- ═══ Scripts ══════════════════════════════════════════════════════════ -->
+<script src="/static/plugins/smartparts/inventree_smart_parts/ui/purescan.js?v=4"></script>
+<script>
+(function() {
+  'use strict';
+
+  const terminal  = document.getElementById('psTerminal');
+  const stateEl   = document.getElementById('psStateLabel');
+  const mainEl    = document.getElementById('psMain');
+  const historyEl = document.getElementById('psHistory');
+  const clockEl   = document.getElementById('psClock');
+  const logListEl = document.getElementById('psLogList');
+
+  // ── Clock ──────────────────────────────────────────────────────────────
+  function updateClock() {
+    const now = new Date();
+    clockEl.textContent = now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  // ── State icons ────────────────────────────────────────────────────────
+  const actionIcons = {
+    TRANSFER:  'fas fa-exchange-alt',
+    INFO:      'fas fa-info-circle',
+    ADD:       'fas fa-plus-circle',
+    REMOVE:    'fas fa-minus-circle',
+    STOCKTAKE: 'fas fa-clipboard-check',
+  };
+
+  const stateIcons = {
+    IDLE:           'fas fa-barcode',
+    AWAITING_ITEM:  'fas fa-box-open',
+    AWAITING_PARAM: 'fas fa-map-marker-alt',
+    COMBO:          'fas fa-layer-group',
+    PROCESSING:     '',
+    SUCCESS:        'fas fa-check-circle',
+    ERROR:          'fas fa-exclamation-triangle',
+  };
+
+  // ── IDLE hint cards ────────────────────────────────────────────────────
+  const hintCards = [
+    { icon: 'fas fa-exchange-alt', name: 'Transfer', code: 'SYS:TRANSFER', color: '#f59e0b' },
+    { icon: 'fas fa-info-circle',  name: 'Info',     code: 'SYS:INFO',      color: '#3b82f6' },
+    { icon: 'fas fa-plus-circle',  name: 'Add',      code: 'SYS:ADD',       color: '#10b981' },
+    { icon: 'fas fa-minus-circle', name: 'Remove',   code: 'SYS:REMOVE',    color: '#ef4444' },
+    { icon: 'fas fa-clipboard-check', name: 'Count',  code: 'SYS:STOCKTAKE', color: '#8b5cf6' },
+    { icon: 'fas fa-undo-alt',     name: 'Undo Last', code: 'SYS:UNDO',     color: '#64748b' },
+  ];
+
+  function renderIdleHints() {
+    return `
+      <div class="ps-icon"><i class="fas fa-barcode"></i></div>
+      <div class="ps-detail">Scan an Action Code</div>
+      <div class="ps-detail-sub">or scan a Stock Item label for quick lookup</div>
+      <div class="ps-actions-grid">
+        ${hintCards.map(h => `
+          <div class="ps-action-hint">
+            <i class="${h.icon}" style="color:${h.color}"></i>
+            <div class="ps-hint-name">${h.name}</div>
+            <div class="ps-hint-code">${h.code}</div>
+          </div>
+        `).join('')}
+      </div>`;
+  }
+
+  // ── Rich Info renderer ────────────────────────────────────────────────
+  function renderRichInfo(richInfo) {
+    const info = richInfo.info;
+    const tracking = richInfo.tracking || [];
+
+    const imgHtml = info.part_image
+      ? `<img class="ps-info-img" src="${escAttr(info.part_image)}" alt="">`
+      : `<div class="ps-info-img-placeholder"><i class="fas fa-microchip"></i></div>`;
+
+    const trackHtml = tracking.length > 0
+      ? `<div class="ps-tracking-title"><i class="fas fa-history"></i> Recent Activity</div>
+         ${tracking.map(t => `
+           <div class="ps-track-entry">
+             <div class="ps-track-date">${escHtml(t.date)} <span class="ps-track-user">by ${escHtml(t.user)}</span></div>
+             <div>${escHtml(t.title)}${t.notes ? ' — ' + escHtml(t.notes) : ''}</div>
+           </div>
+         `).join('')}`
+      : '';
+
+    return `
+      <div class="ps-info-card">
+        <div class="ps-info-header">
+          ${imgHtml}
+          <div class="ps-info-name">${escHtml(info.part_name)}</div>
+        </div>
+        <div class="ps-info-grid">
+          <div>
+            <div class="ps-info-label">Quantity</div>
+            <div class="ps-info-val">${info.quantity}</div>
+          </div>
+          <div>
+            <div class="ps-info-label">Location</div>
+            <div class="ps-info-val">${escHtml(info.location)}</div>
+          </div>
+          ${info.serial ? `
+          <div>
+            <div class="ps-info-label">Serial</div>
+            <div class="ps-info-val">${escHtml(info.serial)}</div>
+          </div>` : ''}
+          ${info.batch ? `
+          <div>
+            <div class="ps-info-label">Batch</div>
+            <div class="ps-info-val">${escHtml(info.batch)}</div>
+          </div>` : ''}
+          ${info.status ? `
+          <div>
+            <div class="ps-info-label">Status</div>
+            <div class="ps-info-val">${escHtml(info.status)}</div>
+          </div>` : ''}
+          <div>
+            <div class="ps-info-label">Stock ID</div>
+            <div class="ps-info-val">#${info.stock_id}</div>
+          </div>
+        </div>
+        ${trackHtml}
+      </div>`;
+  }
+
+  // ── Combo state renderer ──────────────────────────────────────────────
+  function renderCombo(evt) {
+    const action = evt.action || '';
+    const qty = evt.comboQty || 0;
+    const iconClass = actionIcons[action] || 'fas fa-hashtag';
+    return `
+      <div class="ps-icon"><i class="${iconClass}"></i></div>
+      <div class="ps-combo-qty">${qty}</div>
+      <div class="ps-detail">${escHtml(evt.detail)}</div>
+      <div class="ps-combo-bar"><div class="ps-combo-fill"></div></div>
+      <div class="ps-detail-sub">Timer resets with each scan</div>`;
+  }
+
+  // ── Location inventory renderer ─────────────────────────────────────────
+  function renderLocationInfo(locData) {
+    const loc = locData.location;
+    const inv = locData.inventory || [];
+
+    const totalQty = inv.reduce((sum, it) => sum + (it.quantity || 0), 0);
+    const uniqueParts = new Set(inv.map(it => it.part_id)).size;
+
+    let tableBody = '';
+    if (inv.length === 0) {
+      tableBody = `<tr><td colspan="4" class="ps-loc-empty">
+        <i class="fas fa-box-open"></i> No stock items at this location
+      </td></tr>`;
+    } else {
+      tableBody = inv.map(item => {
+        const thumb = item.part_image
+          ? `<img class="ps-loc-thumb" src="${escAttr(item.part_image)}" alt="">`
+          : `<div class="ps-loc-thumb-empty"><i class="fas fa-cube"></i></div>`;
+        return `<tr>
+          <td>
+            <div class="ps-loc-item-cell">
+              ${thumb}
+              <div>${escHtml(item.part_name)}</div>
+            </div>
+          </td>
+          <td class="ps-loc-qty">${item.quantity}</td>
+          <td>${item.serial ? escHtml(item.serial) : '\u2014'}</td>
+          <td>${item.batch ? escHtml(item.batch) : '\u2014'}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    return `
+      <div class="ps-loc-card">
+        <div class="ps-loc-header">
+          <div class="ps-loc-icon"><i class="fas fa-map-marker-alt"></i></div>
+          <div>
+            <div class="ps-loc-name">${escHtml(loc.name)}</div>
+            ${loc.pathstring && loc.pathstring !== loc.name
+              ? `<div class="ps-loc-path">${escHtml(loc.pathstring)}</div>` : ''}
+          </div>
+        </div>
+        <div class="ps-loc-stats">
+          <div><span>${inv.length}</span> stock item${inv.length !== 1 ? 's' : ''}</div>
+          <div><span>${uniqueParts}</span> unique part${uniqueParts !== 1 ? 's' : ''}</div>
+          <div>Total qty: <span>${totalQty}</span></div>
+        </div>
+        ${loc.description ? `<div style="font-size:.85rem;opacity:.5;margin-bottom:.75rem">${escHtml(loc.description)}</div>` : ''}
+        <div class="ps-loc-table-wrap">
+          <table class="ps-loc-table">
+            <thead><tr>
+              <th>Part</th><th>Qty</th><th>Serial</th><th>Batch</th>
+            </tr></thead>
+            <tbody>${tableBody}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+
+  function renderState(evt) {
+    terminal.dataset.state = evt.state;
+    stateEl.textContent = evt.action
+      ? `${evt.state.replace(/_/g, ' ')} \u00b7 ${evt.action}`
+      : evt.state.replace(/_/g, ' ');
+
+    if (evt.state === 'IDLE') {
+      mainEl.innerHTML = renderIdleHints();
+    } else if (evt.state === 'COMBO') {
+      mainEl.innerHTML = renderCombo(evt);
+    } else if (evt.state === 'PROCESSING') {
+      mainEl.innerHTML = `
+        <div class="ps-spinner"></div>
+        <div class="ps-detail">${escHtml(evt.detail)}</div>`;
+    } else if (evt.state === 'SUCCESS' && evt.locationInfo) {
+      mainEl.innerHTML = renderLocationInfo(evt.locationInfo);
+    } else if (evt.state === 'SUCCESS' && evt.richInfo) {
+      mainEl.innerHTML = renderRichInfo(evt.richInfo);
+    } else {
+      const iconClass = evt.state === 'SUCCESS' || evt.state === 'ERROR'
+        ? stateIcons[evt.state]
+        : (evt.action ? actionIcons[evt.action] : stateIcons[evt.state]) || stateIcons[evt.state];
+      mainEl.innerHTML = `
+        <div class="ps-icon"><i class="${iconClass}"></i></div>
+        <div class="ps-detail">${escHtml(evt.detail)}</div>
+        <div class="ps-detail-sub">${
+          evt.state === 'SUCCESS' || evt.state === 'ERROR'
+            ? 'Returning to IDLE shortly\u2026 or scan a new Action Code'
+            : ''
+        }</div>`;
+    }
+
+    // Update action log
+    renderActionLog(evt.actionLog || []);
+  }
+
+  // ── Action log renderer ───────────────────────────────────────────────
+  function renderActionLog(log) {
+    if (!log || log.length === 0) {
+      logListEl.innerHTML = '<div class="ps-log-empty">No actions yet.<br>Scan to begin.</div>';
+      return;
+    }
+
+    logListEl.innerHTML = log.map(entry => {
+      const ts = entry.ts ? new Date(entry.ts).toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit',second:'2-digit'}) : '';
+      let cls = 'ps-log-entry';
+      if (entry.undone) cls += ' undone';
+      if (entry.actionType === 'UNDO') cls += ' undo-entry';
+
+      return `<div class="${cls}">
+        <div class="ps-log-time">${ts}</div>
+        <div>${escHtml(entry.description)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // ── Scan history strip ────────────────────────────────────────────────
+  const _historyMax = 10;
+  const _historyBuf = [];
+
+  function addHistory(raw) {
+    _historyBuf.push({
+      time: new Date().toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit',second:'2-digit'}),
+      raw,
+    });
+    if (_historyBuf.length > _historyMax) _historyBuf.shift();
+    historyEl.innerHTML = _historyBuf.map(h =>
+      `<span class="ps-history-item" title="${escAttr(h.raw)}">${h.time} ${escHtml(h.raw.slice(0,30))}</span>`
+    ).join('');
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────
+  function escHtml(s) { const d = document.createElement('div'); d.textContent = s || ''; return d.innerHTML; }
+  function escAttr(s) { return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+
+  // ── Init PureScan state machine ───────────────────────────────────────
+  PureScan.init(function(evt) {
+    renderState(evt);
+  });
+
+  // Intercept raw scans for history logging
+  const _origHandleScan = PureScan.handleScan;
+  PureScan.handleScan = function(raw) {
+    addHistory(raw);
+    return _origHandleScan(raw);
+  };
+
+})();
+</script>
+{% endblock %}

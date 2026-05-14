@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PureScan – Command Sheet</title>
+<style>
+@page { margin: 1cm; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; padding: 2rem; background: #fff; color: #1e293b; }
+h1 { text-align: center; font-size: 1.5rem; margin-bottom: .25rem; }
+.subtitle { text-align: center; color: #64748b; margin-bottom: 2rem; font-size: .9rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 1rem; }
+.card { border: 2px solid #e2e8f0; border-radius: 10px; padding: 1rem; text-align: center; break-inside: avoid; }
+.qr { display: flex; justify-content: center; margin-bottom: .75rem; }
+.qr svg { width: 120px; height: 120px; }
+.label { font-weight: 700; font-size: .95rem; margin-bottom: .2rem; }
+.icon { font-style: normal; }
+.code { font-family: 'Courier New', monospace; font-size: .75rem; color: #94a3b8; }
+.footer { text-align: center; margin-top: 2rem; font-size: .75rem; color: #94a3b8; }
+@media print {
+    body { padding: .5cm; }
+    .grid { gap: .5rem; }
+    .card { padding: .5rem; }
+}
+</style>
+</head>
+<body>
+<h1>🎯 PureScan – Command Sheet</h1>
+<p class="subtitle">Scan any code below to trigger the corresponding action in the PureScan Terminal</p>
+<div class="grid">
+        <div class="card">
+            <div class="qr"><div style="font-size:1.2rem;font-weight:700;padding:1rem;word-break:break-all">SYS:TRANSFER</div></div>
+            <div class="label" style="color:#f59e0b">
+                <span class="icon">🔄</span> Transfer Stock
+            </div>
+            <div class="code">SYS:TRANSFER</div>
+        </div>
+        <div class="card">
+            <div class="qr"><div style="font-size:1.2rem;font-weight:700;padding:1rem;word-break:break-all">SYS:INFO</div></div>
+            <div class="label" style="color:#3b82f6">
+                <span class="icon">ℹ️</span> Info / Lookup
+            </div>
+            <div class="code">SYS:INFO</div>
+        </div>
+        <div class="card">
+            <div class="qr"><div style="font-size:1.2rem;font-weight:700;padding:1rem;word-break:break-all">SYS:ADD</div></div>
+            <div class="label" style="color:#10b981">
+                <span class="icon">➕</span> Add Stock
+            </div>
+            <div class="code">SYS:ADD</div>
+        </div>
+        <div class="card">
+            <div class="qr"><div style="font-size:1.2rem;font-weight:700;padding:1rem;word-break:break-all">SYS:REMOVE</div></div>
+            <div class="label" style="color:#ef4444">
+                <span class="icon">➖</span> Remove Stock
+            </div>
+            <div class="code">SYS:REMOVE</div>
+        </div>
+        <div class="card">
+            <div class="qr"><div style="font-size:1.2rem;font-weight:700;padding:1rem;word-break:break-all">SYS:STOCKTAKE</div></div>
+            <div class="label" style="color:#8b5cf6">
+                <span class="icon">📋</span> Stocktake
+            </div>
+            <div class="code">SYS:STOCKTAKE</div>
+        </div>
+        <div class="card">
+            <div class="qr"><div style="font-size:1.2rem;font-weight:700;padding:1rem;word-break:break-all">SYS:CANCEL</div></div>
+            <div class="label" style="color:#64748b">
+                <span class="icon">❌</span> Cancel / Reset
+            </div>
+            <div class="code">SYS:CANCEL</div>
+        </div>
+        <div class="card">
+            <div class="qr"><div style="font-size:1.2rem;font-weight:700;padding:1rem;word-break:break-all">SYS:QTY:1</div></div>
+            <div class="label" style="color:#6b7280">
+                <span class="icon">#</span> Quantity: 1
+            </div>
+            <div class="code">SYS:QTY:1</div>
+        </div>
+        <div class="card">
+            <div class="qr"><div style="font-size:1.2rem;font-weight:700;padding:1rem;word-break:break-all">SYS:QTY:5</div></div>
+            <div class="label" style="color:#6b7280">
+                <span class="icon">#</span> Quantity: 5
+            </div>
+            <div class="code">SYS:QTY:5</div>
+        </div>
+        <div class="card">
+            <div class="qr"><div style="font-size:1.2rem;font-weight:700;padding:1rem;word-break:break-all">SYS:QTY:10</div></div>
+            <div class="label" style="color:#6b7280">
+                <span class="icon">#</span> Quantity: 10
+            </div>
+            <div class="code">SYS:QTY:10</div>
+        </div>
+        <div class="card">
+            <div class="qr"><div style="font-size:1.2rem;font-weight:700;padding:1rem;word-break:break-all">SYS:QTY:25</div></div>
+            <div class="label" style="color:#6b7280">
+                <span class="icon">#</span> Quantity: 25
+            </div>
+            <div class="code">SYS:QTY:25</div>
+        </div>
+        <div class="card">
+            <div class="qr"><div style="font-size:1.2rem;font-weight:700;padding:1rem;word-break:break-all">SYS:QTY:50</div></div>
+            <div class="label" style="color:#6b7280">
+                <span class="icon">#</span> Quantity: 50
+            </div>
+            <div class="code">SYS:QTY:50</div>
+        </div>
+        <div class="card">
+            <div class="qr"><div style="font-size:1.2rem;font-weight:700;padding:1rem;word-break:break-all">SYS:QTY:100</div></div>
+            <div class="label" style="color:#6b7280">
+                <span class="icon">#</span> Quantity: 100
+            </div>
+            <div class="code">SYS:QTY:100</div>
+        </div>
+        <div class="card">
+            <div class="qr"><div style="font-size:1.2rem;font-weight:700;padding:1rem;word-break:break-all">SYS:QTY:250</div></div>
+            <div class="label" style="color:#6b7280">
+                <span class="icon">#</span> Quantity: 250
+            </div>
+            <div class="code">SYS:QTY:250</div>
+        </div>
+        <div class="card">
+            <div class="qr"><div style="font-size:1.2rem;font-weight:700;padding:1rem;word-break:break-all">SYS:QTY:500</div></div>
+            <div class="label" style="color:#6b7280">
+                <span class="icon">#</span> Quantity: 500
+            </div>
+            <div class="code">SYS:QTY:500</div>
+        </div>
+        <div class="card">
+            <div class="qr"><div style="font-size:1.2rem;font-weight:700;padding:1rem;word-break:break-all">SYS:QTY:1000</div></div>
+            <div class="label" style="color:#6b7280">
+                <span class="icon">#</span> Quantity: 1000
+            </div>
+            <div class="code">SYS:QTY:1000</div>
+        </div></div>
+<p class="footer">Generated by Smart Parts Plugin – Print this sheet and place at warehouse workstations</p>
+</body>
+</html>
