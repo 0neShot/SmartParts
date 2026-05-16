@@ -32,11 +32,16 @@
 
 ## Installation
 
-### Method 1: pip install (recommended)
+### Method 1: UI install (recommended)
 
-```bash
-pip install git+https://github.com/0neShot/SmartParts.git
-```
+You can install the plugin directly through the InvenTree web interface without touching the command line.
+
+1. Navigate to **Settings** -> **Plugins** in your InvenTree instance.
+2. Click on the **Install Plugin** button.
+3. Fill in the installation form exactly like this:
+   * **Package Name:** `inventree-smart-parts`
+   * **Source URL:** `git+https://github.com/0neShot/SmartParts.git#egg=inventree-smart-parts`
+4. Click **Install**. 
 
 Then restart InvenTree and activate the plugin in **Admin → Plugins**.
 
