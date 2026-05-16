@@ -125,12 +125,22 @@ class DigiKeyClient(BaseApiClient):
 
     def _parse_part(self, raw: Dict[str, Any], search_mpn: str) -> PartData:
         """Convert DigiKey product data to PartData."""
-        # Price breaks
+        # Price breaks — handle both v3 (StandardPricing at root) and
+        # v4 (StandardPricing nested inside ProductVariations).
         price_breaks = []
-        for pb in raw.get('StandardPricing', []):
+        pricing_list = raw.get('StandardPricing', [])
+
+        # Fallback: v4 nests pricing inside ProductVariations
+        if not pricing_list:
+            for variation in raw.get('ProductVariations', []):
+                pricing_list = variation.get('StandardPricing', [])
+                if pricing_list:
+                    break
+
+        for pb in pricing_list:
             try:
                 qty = int(pb.get('BreakQuantity', 0))
-                price = float(pb.get('UnitPrice', 0))
+                price = float(pb.get('UnitPrice', 0) or pb.get('Price', 0))
                 currency = pb.get('Currency', 'USD')
                 if qty > 0 and price > 0:
                     price_breaks.append(PriceBreak(
@@ -140,6 +150,19 @@ class DigiKeyClient(BaseApiClient):
                     ))
             except (ValueError, TypeError):
                 continue
+
+        # Last resort: single unit price from top-level field
+        if not price_breaks:
+            unit_price = raw.get('UnitPrice', 0)
+            if unit_price:
+                try:
+                    price_breaks.append(PriceBreak(
+                        quantity=1,
+                        price=float(unit_price),
+                        currency=raw.get('Currency', {}).get('Code', 'USD') if isinstance(raw.get('Currency'), dict) else 'USD',
+                    ))
+                except (ValueError, TypeError):
+                    pass
 
         # Parameters
         parameters = []
@@ -223,8 +246,26 @@ class DigiKeyClient(BaseApiClient):
         if isinstance(packaging_info, dict):
             package = packaging_info.get('Name', '')
 
-        # DigiKey part number as SKU
-        dk_pn = raw.get('DigiKeyPartNumber', '')
+        # DigiKey part number as SKU — fallback chain for edge-case MPNs
+        # where the primary field is empty.
+        dk_pn = raw.get('DigiKeyPartNumber', '').strip()
+
+        # Fallback 1: Check ExactDigiKeyPartNumber (v4 alternate field)
+        if not dk_pn:
+            dk_pn = raw.get('ExactDigiKeyPartNumber', '').strip()
+
+        # Fallback 2: Packaging/ordering variations may carry a part number
+        if not dk_pn:
+            for variation in raw.get('ProductVariations', []):
+                pn = (variation.get('DigiKeyProductNumber', '')
+                      or variation.get('DigiKeyPartNumber', '')).strip()
+                if pn:
+                    dk_pn = pn
+                    break
+
+        # Fallback 3: Synthesise from MPN (last resort — data confirmed by API)
+        if not dk_pn and mpn_result:
+            dk_pn = mpn_result
 
         # Product URL
         product_url = raw.get('ProductUrl', '')

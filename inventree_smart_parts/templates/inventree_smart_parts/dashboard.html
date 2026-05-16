@@ -141,9 +141,14 @@
       <h1><i class="fas fa-microchip"></i> Smart Parts – Control Center</h1>
       <p>Search for an MPN, verify all data in the editor, and save specifically into InvenTree.</p>
     </div>
-    <button onclick="window.location.assign('/plugin/smartparts/purescan/')" style="display:inline-flex;align-items:center;gap:.5rem;padding:.65rem 1.5rem;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:10px;color:#fff;text-decoration:none;font-weight:600;font-size:.95rem;cursor:pointer;transition:background .2s;white-space:nowrap;backdrop-filter:blur(4px)" onmouseover="this.style.background='rgba(255,255,255,.3)'" onmouseout="this.style.background='rgba(255,255,255,.18)'">
-      <i class="fas fa-crosshairs"></i> PureScan Terminal
-    </button>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+      <button onclick="window.location.href='/'" style="display:inline-flex;align-items:center;gap:.5rem;padding:.65rem 1.5rem;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:10px;color:#fff;text-decoration:none;font-weight:600;font-size:.95rem;cursor:pointer;transition:background .2s;white-space:nowrap;backdrop-filter:blur(4px)" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.12)'" title="Back to InvenTree Dashboard">
+        <i class="fas fa-home"></i> InvenTree
+      </button>
+      <button onclick="window.location.assign('/plugin/smartparts/purescan/')" style="display:inline-flex;align-items:center;gap:.5rem;padding:.65rem 1.5rem;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:10px;color:#fff;text-decoration:none;font-weight:600;font-size:.95rem;cursor:pointer;transition:background .2s;white-space:nowrap;backdrop-filter:blur(4px)" onmouseover="this.style.background='rgba(255,255,255,.3)'" onmouseout="this.style.background='rgba(255,255,255,.18)'">
+        <i class="fas fa-crosshairs"></i> PureScan Terminal
+      </button>
+    </div>
   </div>
 
   <!-- Search -->

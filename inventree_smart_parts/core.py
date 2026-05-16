@@ -36,7 +36,7 @@ class SmartPartsPlugin(UserInterfaceMixin, SettingsMixin, UrlsMixin, InvenTreePl
         "Fetches data from Mouser, DigiKey & LCSC, maps categories, "
         "detects duplicates, and supports batch Excel import."
     )
-    VERSION = "1.0.0"
+    VERSION = "1.0.1"
     AUTHOR = "StarkStrom Engineering"
 
     # ── Plugin Settings (Admin-configurable) ─────────────────────────

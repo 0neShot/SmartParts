@@ -53,8 +53,12 @@ class MouserClient(BaseApiClient):
         logger.info(f"[Mouser] Searching for MPN: {mpn}")
         data = self._request('POST', url, headers=headers, json_data=payload, params=params)
 
-        # Parse the response
-        parts = data.get('SearchResults', {}).get('Parts', [])
+        # Parse the response — guard against None/unexpected shape
+        search_results = data.get('SearchResults') or {}
+        if not isinstance(search_results, dict):
+            logger.warning(f"[Mouser] Unexpected SearchResults type: {type(search_results).__name__}")
+            return None
+        parts = search_results.get('Parts') or []
         if not parts:
             logger.info(f"[Mouser] No results found for MPN: {mpn}")
             return None

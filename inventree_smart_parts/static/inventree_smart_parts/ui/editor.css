@@ -62,6 +62,8 @@
 .sp-input:read-only{background:#f9fafb;color:var(--sp-text-muted);cursor:default}
 .sp-input-changed{border-color:var(--sp-warning)!important;background:rgba(245,158,11,.04)!important}
 .sp-input-changed:focus{box-shadow:0 0 0 3px rgba(245,158,11,.15)!important}
+.sp-input-edited{border-color:#f97316!important;background:rgba(249,115,22,.06)!important;box-shadow:inset 3px 0 0 #f97316}
+.sp-input-edited:focus{box-shadow:inset 3px 0 0 #f97316,0 0 0 3px rgba(249,115,22,.15)!important}
 .sp-ref-note{font-size:.75rem;color:#92400e;display:flex;align-items:center;gap:.3rem}
 .sp-ref-note::before{content:"⚠";font-size:.8rem}
 

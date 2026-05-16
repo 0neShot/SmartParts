@@ -164,7 +164,29 @@ class BaseApiClient(ABC):
                 timeout=self.timeout,
             )
             response.raise_for_status()
-            return response.json()
+
+            try:
+                data = response.json()
+            except (ValueError, TypeError):
+                logger.error(
+                    f"[{self.SOURCE_NAME}] Non-JSON response from {url} "
+                    f"(status={response.status_code}, "
+                    f"content-type={response.headers.get('content-type', '?')})"
+                )
+                raise ApiError(
+                    f"{self.SOURCE_NAME} API returned non-JSON response"
+                )
+
+            if not isinstance(data, dict):
+                logger.error(
+                    f"[{self.SOURCE_NAME}] Expected dict, got {type(data).__name__} "
+                    f"from {url}"
+                )
+                raise ApiError(
+                    f"{self.SOURCE_NAME} API returned unexpected data format"
+                )
+
+            return data
 
         except requests.exceptions.Timeout:
             logger.error(f"[{self.SOURCE_NAME}] Request timeout for URL: {url}")

@@ -15,6 +15,21 @@ from ..api_clients.base import PartData
 
 logger = logging.getLogger('inventree_smart_parts.services.creator')
 
+# ── Shared sentinel values: empty/placeholder parameter values ────────────────
+# Used by both _create_parameters (DB writes) and the parameter_normalizer
+# (display filtering) to guarantee consistent sanitisation.
+EMPTY_SENTINELS: frozenset = frozenset({
+    '', '-', '--', '---', 'n/a', 'na', 'null', 'none', 'unknown',
+    'not specified', 'not applicable', 'tbd', 'tba', '?', '\u2013', '\u2014',
+})
+
+
+def is_useless_value(value) -> bool:
+    """Return True if a parameter value is empty or a known placeholder."""
+    if value is None:
+        return True
+    stripped = str(value).strip()
+    return not stripped or stripped.lower() in EMPTY_SENTINELS
 
 @dataclass
 class CreationResult:
@@ -104,7 +119,12 @@ def create_part_from_data(
 
             # ── Step 3: SupplierParts ──
             supplier_entries = _get_supplier_entries(part_data, part=part)
-            for entry in supplier_entries:
+            logger.debug(
+                f"Supplier pipeline for '{part_data.mpn}': "
+                f"{len(supplier_entries)} entries to create"
+            )
+
+            for i, entry in enumerate(supplier_entries):
                 try:
                     # Each supplier gets its own savepoint so a constraint
                     # failure on one distributor doesn't roll back the rest.
@@ -119,9 +139,9 @@ def create_part_from_data(
                                 result.supplier_parts_existing.append(sup_part.pk)
                 except Exception as e:
                     logger.error(
-                        f"Failed to create SupplierPart for "
+                        f"Failed to create SupplierPart "
                         f"{entry.get('name', '?')}:{entry.get('sku', '?')} "
-                        f"on part '{part_data.mpn}': {e}",
+                        f"for '{part_data.mpn}': {e}",
                         exc_info=True,
                     )
                     result.errors.append(
@@ -254,19 +274,13 @@ def _create_manufacturer_part(
 ) -> Tuple[Optional['ManufacturerPart'], bool]:
     """Create a ManufacturerPart linking Part to Manufacturer.
 
-    Returns (manufacturer_part, was_created) so the caller can distinguish
-    new records from pre-existing ones for accurate reporting.
+    Uses get_or_create keyed on (part, manufacturer, MPN) so that:
+    - Multiple suppliers sharing the same MPN reuse one ManufacturerPart
+    - Concurrent requests or retries don't hit IntegrityError
+
+    Returns (manufacturer_part, was_created).
     """
     from company.models import Company, ManufacturerPart
-
-    # Broad dedup: same MPN on this part → reuse whatever we have
-    existing = ManufacturerPart.objects.filter(
-        part=part,
-        MPN__iexact=data.mpn,
-    ).first()
-    if existing:
-        logger.debug(f"ManufacturerPart already exists: {data.mpn}")
-        return existing, False   # ← not newly created
 
     # Get or create the manufacturer company
     manufacturer = _get_or_create_company(
@@ -278,15 +292,21 @@ def _create_manufacturer_part(
         logger.warning(f"Could not find/create manufacturer: {data.manufacturer}")
         return None, False
 
-    mfr_part = ManufacturerPart.objects.create(
+    mfr_part, created = ManufacturerPart.objects.get_or_create(
         part=part,
         manufacturer=manufacturer,
         MPN=data.mpn,
-        link=data.supplier_url or '',
+        defaults={
+            'link': data.supplier_url or '',
+        },
     )
 
-    logger.info(f"Created ManufacturerPart: {data.mpn} (ID: {mfr_part.pk})")
-    return mfr_part, True   # ← newly created
+    if created:
+        logger.info(f"Created ManufacturerPart: {data.mpn} (ID: {mfr_part.pk})")
+    else:
+        logger.debug(f"ManufacturerPart already exists: {data.mpn} (ID: {mfr_part.pk})")
+
+    return mfr_part, created
 
 
 def _get_supplier_entries(data: PartData, part=None) -> List[Dict]:
@@ -415,11 +435,25 @@ def _create_supplier_part(
     ).first()
 
     if existing:
+        update_fields = []
+
+        # ── Backfill manufacturer_part if missing ──
+        if not existing.manufacturer_part:
+            from company.models import ManufacturerPart as MP
+            mfr = MP.objects.filter(part=part, MPN__iexact=data.mpn).first()
+            if mfr:
+                existing.manufacturer_part = mfr
+                update_fields.append('manufacturer_part')
+                logger.info(f"Backfilled manufacturer_part on SupplierPart {existing.pk}")
+
         # ── Update URL if changed ──
         new_url = supplier_entry.get('url', '')
         if new_url and existing.link != new_url:
             existing.link = new_url
-            existing.save(update_fields=['link'])
+            update_fields.append('link')
+
+        if update_fields:
+            existing.save(update_fields=update_fields)
 
         # ── Refresh price breaks if new ones are provided ──
         if new_price_breaks:
@@ -438,7 +472,7 @@ def _create_supplier_part(
         logger.debug(f"SupplierPart updated (existing): {sku} @ {supplier_name}")
         return existing, False   # ← not newly created
 
-    # ── Create new SupplierPart ──
+    # ── Create new SupplierPart via get_or_create ──
     # Reuse existing ManufacturerPart (case-insensitive) — critical when
     # multiple distributors share the same MPN from the same manufacturer.
     from company.models import ManufacturerPart
@@ -447,12 +481,14 @@ def _create_supplier_part(
     ).first()
 
     try:
-        sup_part = SupplierPart.objects.create(
+        sup_part, was_created = SupplierPart.objects.get_or_create(
             part=part,
             supplier=supplier,
             SKU=sku,
-            link=supplier_entry.get('url', ''),
-            manufacturer_part=mfr_part,
+            defaults={
+                'link': supplier_entry.get('url', ''),
+                'manufacturer_part': mfr_part,
+            },
         )
     except Exception as e:
         logger.error(
@@ -462,19 +498,43 @@ def _create_supplier_part(
         )
         raise  # Re-raise so the savepoint in the caller can catch it
 
+    if not was_created:
+        update_fields = []
+
+        # Backfill manufacturer_part if missing (created before MfrPart existed)
+        if not sup_part.manufacturer_part and mfr_part:
+            sup_part.manufacturer_part = mfr_part
+            update_fields.append('manufacturer_part')
+            logger.info(f"Backfilled manufacturer_part on SupplierPart {sup_part.pk}")
+
+        # Update URL if changed
+        new_url = supplier_entry.get('url', '')
+        if new_url and sup_part.link != new_url:
+            sup_part.link = new_url
+            update_fields.append('link')
+
+        if update_fields:
+            sup_part.save(update_fields=update_fields)
+
+        logger.debug(f"SupplierPart already existed: {sku} @ {supplier_name} (ID: {sup_part.pk})")
+
     for pb in new_price_breaks:
         try:
-            SupplierPriceBreak.objects.create(
+            SupplierPriceBreak.objects.get_or_create(
                 part=sup_part,
                 quantity=pb.quantity,
-                price=pb.price,
-                price_currency=pb.currency,
+                defaults={
+                    'price': pb.price,
+                    'price_currency': pb.currency,
+                },
             )
         except Exception as e:
             logger.warning(f"Failed to create price break for {sku}: {e}")
 
-    logger.info(f"Created SupplierPart: {sku} @ {supplier_name} (ID: {sup_part.pk})")
-    return sup_part, True   # ← newly created
+    if was_created:
+        logger.info(f"Created SupplierPart: {sku} @ {supplier_name} (ID: {sup_part.pk})")
+
+    return sup_part, was_created
 
 
 def _get_or_create_company(
@@ -517,6 +577,7 @@ def _get_or_create_company(
     return company
 
 
+
 def _create_parameters(part, parameters: List[Any]):
     """Create Parameter entries for the Part.
 
@@ -527,25 +588,12 @@ def _create_parameters(part, parameters: List[Any]):
     from common.models import Parameter, ParameterTemplate
     from django.contrib.contenttypes.models import ContentType
 
-    # Distributor placeholders that carry zero information
-    _EMPTY_SENTINELS: frozenset = frozenset({
-        '', '-', '--', '---', 'n/a', 'na', 'null', 'none', 'unknown',
-        'not specified', 'not applicable', 'tbd', 'tba', '?', '–', '—',
-    })
-
-    def _is_useless(value) -> bool:
-        """Return True if the value is empty or a known placeholder."""
-        if value is None:
-            return True
-        stripped = str(value).strip()
-        return not stripped or stripped.lower() in _EMPTY_SENTINELS
-
     part_type = ContentType.objects.get_for_model(part)
     skipped = 0
 
     for param in parameters:
         # Drop parameters without a name or with a useless value
-        if not param.name or _is_useless(getattr(param, 'value', None)):
+        if not param.name or is_useless_value(getattr(param, 'value', None)):
             skipped += 1
             continue
 

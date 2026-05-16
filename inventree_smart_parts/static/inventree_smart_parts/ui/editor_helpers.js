@@ -28,8 +28,8 @@ function buildField(id, label, apiVal, dbVal, type) {
     ? `<span class="sp-ref-note">Current: "${escHtml(dv.substring(0,80))}"</span>`
     : '';
   const ctrl  = (type === 'textarea')
-    ? `<textarea id="${id}" class="${cls}" rows="2" style="resize:vertical">${escHtml(av)}</textarea>`
-    : `<input type="text" id="${id}" class="${cls}" value="${escHtml(av)}">`;
+    ? `<textarea id="${id}" class="${cls}" rows="2" style="resize:vertical" data-original="${escHtml(av)}" oninput="trackEdit(this)">${escHtml(av)}</textarea>`
+    : `<input type="text" id="${id}" class="${cls}" value="${escHtml(av)}" data-original="${escHtml(av)}" oninput="trackEdit(this)">`;
   return `
     <div class="sp-field">
       <label for="${id}">${escHtml(label)}</label>
@@ -122,15 +122,20 @@ function buildInitialSuppliers(searchData, existingData) {
 
   ['mouser','digikey','lcsc'].forEach(src => {
     const s = searchData.sources[src];
-    if (!s || s.error || !s.supplier_sku) return;
-    const key = dedupeKey(s.supplier_name || src, s.supplier_sku);
+    if (!s || s.error) return;
+    // Fallback: if API confirmed a match but SKU is empty, use MPN
+    const sku = s.supplier_sku || s.mpn || searchData.merged?.mpn || '';
+    if (!sku) return;  // truly nothing to work with
+    const skuMissing = !s.supplier_sku;
+    const key = dedupeKey(s.supplier_name || src, sku);
     if (seen.has(key)) return;
     seen.add(key);
     list.push({
       supplier_name: s.supplier_name || src,
-      supplier_sku:  s.supplier_sku  || '',
+      supplier_sku:  sku,
       supplier_url:  s.supplier_url  || '',
       price_breaks:  s.price_breaks  || [],
+      _skuMissing:   skuMissing,
     });
   });
 
@@ -173,8 +178,10 @@ function buildSupplierCard(s, idx) {
         <span class="sp-supplier-name">
           <i class="fas fa-store" style="color:var(--sp-primary)"></i>
           <input type="text" class="sp-input" value="${escHtml(s.supplier_name)}"
-                 placeholder="Supplier Name" style="font-weight:700;max-width:220px">
+                 placeholder="Supplier Name" style="font-weight:700;max-width:220px"
+                 data-original="${escHtml(s.supplier_name)}" oninput="trackEdit(this)">
           ${s._dbOnly ? '<span class="sp-badge sp-badge-db">DB</span>' : ''}
+          ${s._skuMissing ? '<span class="sp-badge sp-badge-warn" title="Original SKU was empty — using MPN as fallback">⚠ SKU Fallback</span>' : ''}
         </span>
         <button type="button" class="sp-btn sp-btn-danger sp-btn-sm" onclick="delSupplier(this)">
           <i class="fas fa-trash"></i> Remove
@@ -183,13 +190,15 @@ function buildSupplierCard(s, idx) {
       <div class="sp-field">
         <label>SKU</label>
         <div class="sp-input-wrap">
-          <input type="text" class="sp-input" value="${escHtml(s.supplier_sku)}" placeholder="Supplier SKU">
+          <input type="text" class="sp-input" value="${escHtml(s.supplier_sku)}" placeholder="Supplier SKU"
+                 data-original="${escHtml(s.supplier_sku)}" oninput="trackEdit(this)">
         </div>
       </div>
       <div class="sp-field">
         <label>URL</label>
         <div class="sp-input-wrap">
-          <input type="text" class="sp-input" value="${escHtml(s.supplier_url)}" placeholder="Product Link">
+          <input type="text" class="sp-input" value="${escHtml(s.supplier_url)}" placeholder="Product Link"
+                 data-original="${escHtml(s.supplier_url)}" oninput="trackEdit(this)">
         </div>
       </div>
       <div style="margin-top:.5rem">

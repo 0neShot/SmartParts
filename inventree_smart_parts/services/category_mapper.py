@@ -275,6 +275,50 @@ def build_synonym_table(user_synonyms_json: str = '') -> Dict[str, str]:
 
 _SEP_RE = re.compile(r'[>\\/|,_\-&+\s]+')
 
+# Multi-stage noise strippers applied to distributor category strings
+# before tokenisation. Each regex removes a class of noise.
+_STRIP_PARENS_RE = re.compile(r'\([^)]*\)')                    # (ICs), (LDO), etc.
+_STRIP_VALUES_RE = re.compile(                                  # component value specs
+    r'\b\d+(?:\.\d+)?'                                          # number
+    r'(?:pf|nf|uf|µf|mf|f'                                     # capacitance
+    r'|ohm|kohm|mohm|ω|kω|mω'                                  # resistance
+    r'|uh|mh|nh|h'                                              # inductance
+    r'|v|kv|mv'                                                 # voltage
+    r'|a|ma|µa|ua'                                              # current
+    r'|mhz|khz|ghz|hz'                                          # frequency
+    r'|w|mw|kw'                                                 # power
+    r')\b',
+    re.IGNORECASE,
+)
+_STRIP_PACKAGE_RE = re.compile(                                 # SMD package codes
+    r'\b(?:0201|0402|0603|0805|1206|1210|1812|2010|2512'
+    r'|sop\d*|soic\d*|qfp\d*|tqfp\d*|bga\d*|dfn\d*|qfn\d*'
+    r'|dip\d*|pdip\d*|to-?\d+[a-z]*|sot-?\d+[a-z]*)\b',
+    re.IGNORECASE,
+)
+_STRIP_LONE_NUMS_RE = re.compile(r'\b\d+\b')                   # standalone numbers
+_STRIP_MULTI_SPACE_RE = re.compile(r'\s{2,}')                  # collapse whitespace
+
+
+def _strip_category_noise(text: str) -> str:
+    """
+    Strip distributor-specific noise from a category string.
+
+    Runs multiple passes to remove:
+      1. Parenthetical abbreviations: (ICs), (LDO), (SMD)
+      2. Component value specs: 10uF, 50V, 0.1ohm
+      3. SMD package codes: 0805, SOIC8, QFN32
+      4. Standalone numbers left over after stripping
+      5. Excess whitespace
+    """
+    s = text
+    s = _STRIP_PARENS_RE.sub(' ', s)
+    s = _STRIP_VALUES_RE.sub(' ', s)
+    s = _STRIP_PACKAGE_RE.sub(' ', s)
+    s = _STRIP_LONE_NUMS_RE.sub(' ', s)
+    s = _STRIP_MULTI_SPACE_RE.sub(' ', s)
+    return s.strip()
+
 
 def _normalise(text: str) -> str:
     """Lowercase and collapse separators into spaces."""
@@ -374,6 +418,12 @@ def fuzzy_match_category(
     if not distributor_category:
         return _get_default_category(default_category_name)
 
+    # Defensive coercion: threshold may arrive as None, str, or int
+    try:
+        threshold = int(threshold) if threshold is not None else 60
+    except (ValueError, TypeError):
+        threshold = 60
+
     # -- Step 0: Check Learned Mappings (absolute override) --
     if learned_mappings_json:
         try:
@@ -406,8 +456,14 @@ def fuzzy_match_category(
 
     synonyms = build_synonym_table(user_synonyms_json)
 
-    # Parse the distributor category into path segments
-    dist_parts = [p.strip() for p in re.split(r'[>/|]', distributor_category) if p.strip()]
+    # Parse the distributor category into path segments and strip noise
+    dist_parts_raw = [p.strip() for p in re.split(r'[>/|]', distributor_category) if p.strip()]
+    dist_parts = [_strip_category_noise(p) for p in dist_parts_raw]
+    dist_parts = [p for p in dist_parts if p]  # drop segments that became empty after stripping
+
+    if not dist_parts:
+        dist_parts = dist_parts_raw  # fallback: use original if stripping killed everything
+
     dist_tokens_flat   = _tokenise(' '.join(dist_parts), synonyms)
     dist_tokens_leafw  = _leaf_tokens(dist_parts, synonyms)
     dist_leaf          = dist_parts[-1] if dist_parts else distributor_category
@@ -560,7 +616,9 @@ def debug_match(distributor_category: str, top_n: int = 5,
     """
     categories = get_category_tree()
     synonyms = build_synonym_table(user_synonyms_json)
-    dist_parts = [p.strip() for p in re.split(r'[>/|]', distributor_category) if p.strip()]
+    dist_parts_raw = [p.strip() for p in re.split(r'[>/|]', distributor_category) if p.strip()]
+    dist_parts = [_strip_category_noise(p) for p in dist_parts_raw]
+    dist_parts = [p for p in dist_parts if p] or dist_parts_raw
     dist_tokens_flat  = _tokenise(' '.join(dist_parts), synonyms)
     dist_tokens_leafw = _leaf_tokens(dist_parts, synonyms)
     dist_leaf_tokens  = _tokenise(dist_parts[-1] if dist_parts else distributor_category, synonyms)

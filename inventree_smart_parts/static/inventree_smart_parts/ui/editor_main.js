@@ -8,6 +8,22 @@ let _defaultQty   = 0;   // populated from BOM quantity or API data
 // Scan data injected by the barcode scanner listener before search fires
 let _pendingScan  = null;  // { quantity, batch, supplierSku, mpn, raw }
 
+/* ── Manual edit tracking ─────────────────────────────────────── */
+/**
+ * Compare current value against data-original. Toggle orange highlight
+ * class so the user sees which fields were manually changed before save.
+ */
+function trackEdit(el) {
+  const orig = el.getAttribute('data-original');
+  if (orig === null) return;  // no tracking attribute
+  const current = (el.tagName === 'TEXTAREA') ? el.value : el.value;
+  if (current.trim() !== orig.trim()) {
+    el.classList.add('sp-input-edited');
+  } else {
+    el.classList.remove('sp-input-edited');
+  }
+}
+
 /* ── Search ────────────────────────────────────────────────────── */
 function doSearch(e) {
   e.preventDefault();

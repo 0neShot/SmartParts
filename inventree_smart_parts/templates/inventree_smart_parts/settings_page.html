@@ -374,6 +374,62 @@
             <a href="../logs/" class="sp-btn sp-btn-outline"><i class="fas fa-list-alt"></i> View Logs</a>
         </div>
     </div>
+
+    <!-- Scanner Diagnostic Tool -->
+    <div class="sp-card" id="scannerDiagCard">
+        <h3><i class="fas fa-stethoscope" style="color:var(--sp-warning)"></i> Scanner Diagnostic Tool</h3>
+        <p style="font-size:.85rem;color:var(--sp-text-muted);margin:0 0 1rem">
+            Scan a barcode into the field below to test your scanner configuration.
+            The tool checks for <strong>missing GS control characters</strong> (Keyboard Wedge problem)
+            and shows the full parsed result from the DataMatrix decoder.
+        </p>
+
+        <div style="display:flex;gap:.5rem;margin-bottom:1rem">
+            <input type="text" id="diagScanInput"
+                placeholder="&#x1F50D; Click here, then scan a barcode..."
+                autofocus
+                style="flex:1;padding:.7rem 1rem;border:2px solid var(--sp-primary);border-radius:10px;font-size:1rem;font-family:monospace;outline:none;transition:border-color .2s"
+                onfocus="this.style.borderColor='var(--sp-warning)'"
+                onblur="this.style.borderColor='var(--sp-primary)'"
+            >
+            <button class="sp-btn sp-btn-primary" onclick="runDiagnostic()" id="diagRunBtn">
+                <i class="fas fa-microscope"></i> Decode
+            </button>
+        </div>
+
+        <!-- Warning area -->
+        <div id="diagWarning" style="display:none;margin-bottom:1rem;padding:1rem;border-radius:10px;font-size:.9rem;border:2px solid transparent"></div>
+
+        <!-- Results -->
+        <div id="diagResults" style="display:none">
+            <h4 style="font-size:.95rem;font-weight:600;margin:0 0 .75rem;display:flex;align-items:center;gap:.4rem">
+                <i class="fas fa-clipboard-check" style="color:var(--sp-success)"></i> Parsed Result
+            </h4>
+            <table style="width:100%;border-collapse:collapse;font-size:.88rem;margin-bottom:1rem" id="diagTable">
+                <thead>
+                    <tr style="background:rgba(99,102,241,.06)">
+                        <th style="text-align:left;padding:.5rem .75rem;border-bottom:2px solid var(--sp-border);width:160px">Field</th>
+                        <th style="text-align:left;padding:.5rem .75rem;border-bottom:2px solid var(--sp-border)">Value</th>
+                    </tr>
+                </thead>
+                <tbody id="diagTableBody"></tbody>
+            </table>
+
+            <details style="margin-bottom:.75rem">
+                <summary style="font-size:.82rem;cursor:pointer;color:var(--sp-text-muted);font-weight:600">
+                    <i class="fas fa-code"></i> Hex Dump (raw bytes)
+                </summary>
+                <pre id="diagHex" style="margin:.5rem 0 0;padding:.75rem;background:#f8fafc;border:1px solid var(--sp-border);border-radius:8px;font-size:.75rem;font-family:monospace;overflow-x:auto;white-space:pre-wrap;word-break:break-all;max-height:200px;overflow-y:auto"></pre>
+            </details>
+
+            <details>
+                <summary style="font-size:.82rem;cursor:pointer;color:var(--sp-text-muted);font-weight:600">
+                    <i class="fas fa-terminal"></i> Raw String
+                </summary>
+                <pre id="diagRaw" style="margin:.5rem 0 0;padding:.75rem;background:#f8fafc;border:1px solid var(--sp-border);border-radius:8px;font-size:.8rem;font-family:monospace;overflow-x:auto;white-space:pre-wrap;word-break:break-all"></pre>
+            </details>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -631,5 +687,133 @@
             })
             .catch(() => { });
     })();
+</script>
+
+<!-- Scanner parser (reuse the same DataMatrix decoder used by PureScan) -->
+<script src="/static/plugins/smartparts/inventree_smart_parts/ui/scanner.js?v=4"></script>
+<script>
+    // ── Scanner Diagnostic Tool ──────────────────────────────────────────────
+
+    const diagInput   = document.getElementById('diagScanInput');
+    const diagWarning = document.getElementById('diagWarning');
+    const diagResults = document.getElementById('diagResults');
+    const diagBody    = document.getElementById('diagTableBody');
+    const diagHex     = document.getElementById('diagHex');
+    const diagRaw     = document.getElementById('diagRaw');
+
+    // Auto-decode on Enter
+    if (diagInput) {
+        diagInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                runDiagnostic();
+            }
+        });
+    }
+
+    function toHex(str) {
+        return Array.from(str).map(function(c) {
+            var code = c.charCodeAt(0);
+            var hex = code.toString(16).padStart(2, '0');
+            // Highlight control chars in red
+            if (code < 0x20 || code === 0x7f) {
+                return '<span style="color:var(--sp-danger);font-weight:700">' + hex + '</span>';
+            }
+            return hex;
+        }).join(' ');
+    }
+
+    function runDiagnostic() {
+        if (!diagInput) return;
+        var raw = diagInput.value;
+        if (!raw) {
+            diagWarning.style.display = 'block';
+            diagWarning.style.background = 'rgba(245,158,11,.08)';
+            diagWarning.style.borderColor = 'var(--sp-warning)';
+            diagWarning.style.color = '#92400e';
+            diagWarning.innerHTML = '<i class="fas fa-info-circle"></i> <strong>Empty input.</strong> Click the field and scan a barcode.';
+            diagResults.style.display = 'none';
+            return;
+        }
+
+        // ── GS character detection ──
+        var hasGS = raw.indexOf('\x1d') !== -1;
+        var hasRS = raw.indexOf('\x1e') !== -1;
+        var looksLikeDataMatrix = /\[\)>/.test(raw) || /^\x05\x06/.test(raw);
+
+        if (looksLikeDataMatrix && !hasGS) {
+            diagWarning.style.display = 'block';
+            diagWarning.style.background = 'rgba(239,68,68,.08)';
+            diagWarning.style.borderColor = 'var(--sp-danger)';
+            diagWarning.style.color = '#991b1b';
+            diagWarning.innerHTML =
+                '<i class="fas fa-exclamation-triangle"></i> ' +
+                '<strong>Warning: Keyboard Wedge Detected!</strong><br>' +
+                'Your scanner is stripping invisible GS control characters (ASCII 29 / <code>\\x1d</code>). ' +
+                'The DataMatrix header <code>[)&gt;</code> was found but <strong>no Group Separator</strong> is present.<br><br>' +
+                '<strong>Recommended Fix:</strong> Configure your barcode scanner hardware to transmit control characters, ' +
+                'or program it to replace GS with a tilde (<code>~</code>) character.<br>' +
+                '<em>SmartParts will attempt to parse this using the heuristic fallback engine.</em>';
+        } else if (looksLikeDataMatrix && hasGS) {
+            diagWarning.style.display = 'block';
+            diagWarning.style.background = 'rgba(16,185,129,.08)';
+            diagWarning.style.borderColor = 'var(--sp-success)';
+            diagWarning.style.color = '#065f46';
+            diagWarning.innerHTML =
+                '<i class="fas fa-check-circle"></i> ' +
+                '<strong>Scanner OK:</strong> GS control characters detected. ' +
+                'Your scanner is transmitting the full ANSI/ISO DataMatrix structure correctly.' +
+                (hasRS ? ' RS separator also present.' : '');
+        } else {
+            diagWarning.style.display = 'block';
+            diagWarning.style.background = 'rgba(59,130,246,.06)';
+            diagWarning.style.borderColor = 'var(--sp-info)';
+            diagWarning.style.color = '#1e40af';
+            diagWarning.innerHTML =
+                '<i class="fas fa-barcode"></i> ' +
+                '<strong>Plain barcode:</strong> No DataMatrix header detected. ' +
+                'This appears to be a simple 1D barcode or plain text string.';
+        }
+
+        // ── Parse with SmartPartsScanner ──
+        var result = (window.SmartPartsScanner && typeof SmartPartsScanner.parse === 'function')
+            ? SmartPartsScanner.parse(raw)
+            : { mpn: raw, quantity: null, batch: '', supplierSku: '', poNumber: '', source: 'unavailable' };
+
+        // ── Render parsed fields ──
+        var fields = [
+            ['Parser Stage',   result.source || '—'],
+            ['Part Number',    result.mpn || '—'],
+            ['Quantity',       result.quantity !== null ? String(result.quantity) : '—'],
+            ['Batch / Lot',    result.batch || '—'],
+            ['Supplier SKU',   result.supplierSku || '—'],
+            ['PO / Reference', result.poNumber || '—'],
+            ['GS Present',     hasGS ? '✅ Yes' : '❌ No'],
+            ['RS Present',     hasRS ? '✅ Yes' : '❌ No'],
+            ['String Length',  String(raw.length) + ' chars'],
+        ];
+
+        diagBody.innerHTML = fields.map(function(f) {
+            var highlight = (f[0] === 'Part Number' && f[1] !== '—') ? 'font-weight:700;color:var(--sp-primary)' : '';
+            return '<tr>' +
+                '<td style="padding:.4rem .75rem;border-bottom:1px solid var(--sp-border);font-weight:600;color:var(--sp-text-muted)">' + esc(f[0]) + '</td>' +
+                '<td style="padding:.4rem .75rem;border-bottom:1px solid var(--sp-border);font-family:monospace;' + highlight + '">' + esc(f[1]) + '</td>' +
+                '</tr>';
+        }).join('');
+
+        // ── Hex dump ──
+        diagHex.innerHTML = toHex(raw);
+
+        // ── Raw string (escape control chars for display) ──
+        diagRaw.textContent = raw.replace(/[\x00-\x1f]/g, function(c) {
+            return '\\x' + c.charCodeAt(0).toString(16).padStart(2, '0');
+        });
+
+        diagResults.style.display = 'block';
+
+        // Clear and re-focus input for next scan
+        diagInput.value = '';
+        diagInput.focus();
+    }
 </script>
 {% endblock %}

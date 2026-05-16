@@ -14,6 +14,12 @@ from django.views.decorators.csrf import csrf_exempt
 
 logger = logging.getLogger('inventree_smart_parts.views')
 
+
+def _is_useless_param_value(value: str) -> bool:
+    """Thin wrapper around part_creator.is_useless_value for parameter filtering."""
+    from .services.part_creator import is_useless_value
+    return is_useless_value(value)
+
 # ── Persistent Activity Logger ──────────────────────────────────────────────
 from .services.activity_logger import log_activity, get_logs, get_recent
 
@@ -237,15 +243,20 @@ def api_search(request):
             logger.warning(f"LCSC search error: {e}")
 
     # Merge
-    priority_str = plugin.get_setting('API_PRIORITY')
-    priority_order = [p.strip() for p in priority_str.split(',')]
+    priority_str = plugin.get_setting('API_PRIORITY') or 'mouser,digikey,lcsc'
+    priority_order = [p.strip() for p in priority_str.split(',') if p.strip()]
     merged = merge_part_data(api_results, priority_order)
+
+    logger.debug(
+        f"Search '{mpn}': {len(api_results)} API result(s), "
+        f"merged {len(merged.raw_data.get('supplier_data', [])) if merged else 0} supplier(s)"
+    )
 
     # Category mapping
     category_match = None
     if merged and merged.category:
-        threshold = plugin.get_setting('FUZZY_THRESHOLD')
-        default_cat = plugin.get_setting('DEFAULT_CATEGORY')
+        threshold = plugin.get_setting('FUZZY_THRESHOLD') or 65
+        default_cat = plugin.get_setting('DEFAULT_CATEGORY') or ''
         user_synonyms = plugin.get_setting('CATEGORY_SYNONYMS') or '{}'
         learned_mappings = plugin.get_setting('LEARNED_CATEGORY_MAPPINGS') or '{}'
         cat_id, cat_path, score = fuzzy_match_category(
@@ -348,12 +359,18 @@ def create_part(request):
             PartParameter(name=p.get('name', ''), value=p.get('value', ''), unit=p.get('unit', ''))
             for p in body.get('parameters', [])
             if p.get('name') and p.get('value')
+            and not _is_useless_param_value(p.get('value', ''))
         ],
     )
 
     # Reconstruct supplier data into raw_data
     supplier_data = body.get('supplier_data', [])
     source_image_urls = body.get('source_image_urls', [])
+
+    logger.debug(
+        f"Create '{part_data.mpn}': {len(supplier_data)} supplier(s) from frontend"
+    )
+
     if supplier_data or source_image_urls:
         part_data.raw_data = {
             'supplier_data': supplier_data,

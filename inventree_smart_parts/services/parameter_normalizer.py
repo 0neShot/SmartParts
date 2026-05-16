@@ -314,12 +314,24 @@ def normalize_parameter_list(parameters: list) -> list:
     """
     Normalize a list of parameter dicts [{'name':…, 'value':…, 'unit':…}, …].
     Returns a new list with normalized values.
+
+    Parameters with empty or placeholder values (e.g. "-", "N/A", "unknown")
+    are stripped out so they never reach the editor UI or the database.
     """
+    from .part_creator import is_useless_value
+
     result = []
     for p in parameters:
+        name = p.get('name', '')
+        value = p.get('value', '')
+
+        # Skip parameters without a name or with a useless value
+        if not name or is_useless_value(value):
+            continue
+
         n = normalize_parameter(
-            name=p.get('name', ''),
-            value=p.get('value', ''),
+            name=name,
+            value=value,
             unit=p.get('unit', ''),
         )
         result.append({

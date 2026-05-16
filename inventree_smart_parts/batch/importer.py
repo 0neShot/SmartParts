@@ -465,8 +465,8 @@ def _process_single_row(
 
     # ── Step 2: Search APIs ──
     api_results = []
-    priority_str = plugin_instance.get_setting('API_PRIORITY')
-    priority_order = [p.strip() for p in priority_str.split(',')]
+    priority_str = plugin_instance.get_setting('API_PRIORITY') or 'mouser,digikey,lcsc'
+    priority_order = [p.strip() for p in priority_str.split(',') if p.strip()]
 
     if plugin_instance.get_setting('MOUSER_ENABLED'):
         try:
@@ -522,8 +522,8 @@ def _process_single_row(
     cat_source = cat_from_row or merged.category
 
     if cat_source:
-        threshold = plugin_instance.get_setting('FUZZY_THRESHOLD')
-        default_cat = plugin_instance.get_setting('DEFAULT_CATEGORY')
+        threshold = plugin_instance.get_setting('FUZZY_THRESHOLD') or 65
+        default_cat = plugin_instance.get_setting('DEFAULT_CATEGORY') or ''
         user_synonyms = plugin_instance.get_setting('CATEGORY_SYNONYMS') or '{}'
         learned_mappings = plugin_instance.get_setting('LEARNED_CATEGORY_MAPPINGS') or '{}'
         cat_id, cat_path, score = fuzzy_match_category(

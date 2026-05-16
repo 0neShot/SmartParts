@@ -1,6 +1,6 @@
 /**
- * SmartParts Barcode Scanner  (v3 – ANSI/ISO + Heuristic Regex Fallback)
- * ======================================================================
+ * SmartParts Barcode Scanner  (v4 – Strong-Boundary DataMatrix Parser)
+ * =====================================================================
  * Parses 2D distributor barcodes (Mouser, DigiKey, TE – ANSI MH10.8.2 /
  * ISO/IEC 15434) from a barcode scanner wedge (USB HID keyboard mode).
  *
@@ -11,12 +11,12 @@
  *   separators (or scanner-specific substitutes like | ~ space).
  *   Extracts: 1P/P → MPN, Q → Qty, 1T → Batch, 30P → supplierSku, K → PO.
  *
- * Stage 2  – Heuristic / Iterative Scanner (separator-stripped DataMatrix):
+ * Stage 2  – GS-Stripped DataMatrix (strong-boundary algorithm):
  *   Engaged when the string starts with [)>05 or [)>06 but contains NO
- *   GS/RS characters.  Uses an iterative prefix-matching scanner that
- *   consumes the longest matching DI at each position and then reads the
- *   value portion according to the DI's expected value pattern.
- *   Handles keyboard wedge scanners that strip ASCII 29/30.
+ *   GS/RS characters (keyboard wedge stripped them).
+ *   Classifies DIs as STRONG (1P, 1T, 1K, 30P, 6D, Q+digit) or WEAK
+ *   (BT, LT, DC, P, K, S, V).  Only strong DIs terminate field values,
+ *   preventing false splits inside part numbers like "LMK107BBJ106MALT".
  *
  * Stage 3  – Graceful fallback:
  *   Treats the raw string as a bare MPN / single-field barcode.
@@ -148,62 +148,74 @@
 
 
   // ────────────────────────────────────────────────────────────────────────────
-  //  Stage 2 – Heuristic DataMatrix parser (separator-stripped)
+  //  Stage 2 – GS-Stripped DataMatrix parser (strong-boundary algorithm)
   // ────────────────────────────────────────────────────────────────────────────
+  //
+  // When the keyboard wedge strips ASCII 29/30 separators, all DI fields are
+  // concatenated into a single string.  Naively splitting on DI prefixes fails
+  // because part numbers can contain letters that look like DI prefixes
+  // (e.g. "STM32F103C8T6" contains S, "LMK107BBJ106MALT" contains LT).
+  //
+  // Solution: classify DIs as STRONG or WEAK.
+  //   • Strong DIs (numeric-prefixed: 1P, 1T, 1K, 30P, 6D, Q+digit) are
+  //     always treated as field boundaries when terminating a value.
+  //   • Weak DIs (BT, LT, DC, PN, K, P, etc.) are only valid as field
+  //     STARTERS when preceded by a non-alphanumeric char or at position 0.
+  //     They are NEVER used as value terminators.
 
   /**
-   * Data Identifier table for the iterative scanner.
-   * Each entry: [prefix, resultKey]
-   *   resultKey = which result field to populate, or null for skip-only DIs.
-   *
-   * ORDERING: longest prefixes first so "30P" is tried before "3S",
-   * "QTY" before "QT", "1P" before "1T", "PN" before "PO" before "P", etc.
+   * DI definition table: [prefix, resultKey, isStrong]
+   * Ordered longest-prefix-first for greedy matching.
    */
   const DI_TABLE = [
-    ['30P', 'supplierSku'],   // Distributor SKU
-    ['QTY', 'quantity'   ],   // Quantity (long form)
-    ['1P',  'mpn'        ],   // Manufacturer Part Number
-    ['1T',  'batch'      ],   // Lot / Batch Code
-    ['1S',  null         ],   // Serial – informational
-    ['2S',  null         ],
-    ['3S',  null         ],
-    ['4L',  null         ],   // Country – informational
-    ['9D',  null         ],   // Date – informational
-    ['PN',  'mpn'        ],   // Part Number (TE Connectivity style)
-    ['PO',  'poNumber'   ],   // Purchase Order
-    ['QT',  'quantity'   ],   // Quantity (short form)
-    ['BT',  'batch'      ],   // Batch / Lot (variant)
-    ['BX',  null         ],   // Box / Packaging – informational
-    ['DC',  null         ],   // Date Code – informational
-    ['LT',  'batch'      ],   // Lot / Trace
-    ['RV',  null         ],   // Revision – informational (RV, RVD)
-    ['K',   'poNumber'   ],   // Customer PO / Reference
-    ['Q',   'quantity'   ],   // Quantity (ANSI single-char)
-    ['P',   'mpn'        ],   // Part Number (generic, last resort)
-    ['V',   null         ],   // Vendor – informational
-    ['S',   null         ],   // Serial – informational
+    ['30P', 'supplierSku', true ],
+    ['QTY', 'quantity',    true ],
+    ['1K',  'poNumber',    true ],
+    ['1P',  'mpn',         true ],
+    ['1T',  'batch',       true ],
+    ['1S',  null,          true ],
+    ['2S',  null,          true ],
+    ['3S',  null,          true ],
+    ['4L',  null,          true ],
+    ['6D',  null,          true ],   // Date code (strong)
+    ['9D',  null,          false],   // Date code (weak – 9D at qty end causes false hits)
+    ['PN',  'mpn',         false],
+    ['PO',  'poNumber',    false],
+    ['QT',  'quantity',    false],
+    ['BT',  'batch',       false],
+    ['BX',  null,          false],
+    ['DC',  null,          false],
+    ['LT',  'batch',       false],
+    ['RV',  null,          false],
+    ['K',   'poNumber',    false],
+    ['Q',   'quantity',    false],
+    ['P',   'mpn',         false],
+    ['V',   null,          false],
+    ['S',   null,          false],
   ];
 
-  // All known DI prefixes (extracted for the lookahead regex)
-  const _ALL_DI_PREFIXES = DI_TABLE.map(d => d[0]);
-
-  // Build a lookahead pattern: "stop consuming value when the next DI starts"
-  // The DI boundary is: a known prefix followed by at least one alphanumeric
-  // character (its value), OR end of string.
-  // All DI prefixes are pure alphanumeric – no regex escaping needed.
-  const _DI_STOP = _ALL_DI_PREFIXES.join('|');
-  const _VAL_RE = new RegExp(
-    '(.+?)(?=(?:' + _DI_STOP + ')(?=[A-Z0-9-])|$)', 'i'
+  // Strong boundary lookahead: matches the START of any strong DI or end-of-string.
+  // Used to determine where a field value ENDS.
+  const _STRONG_BOUNDARY_RE = new RegExp(
+    '(?='
+    + '30P'
+    + '|QTY'
+    + '|1[PTKSE]'
+    + '|2S|3S'
+    + '|4L'
+    + '|6D'
+    + '|Q(?=\d)'
+    + '|$'
+    + ')'
   );
 
   /**
-   * Iterative scanner: walks through the body string position by position,
-   * at each position trying to match the longest known DI prefix.  When a
-   * prefix matches, consumes its value using the lookahead regex (which
-   * stops at the next DI boundary), then advances past the consumed portion.
+   * Iterative scanner with strong-boundary value extraction.
+   * Walks through the body string, matching DI prefixes greedily,
+   * then capturing values until the next STRONG DI boundary.
    */
   function _tryHeuristicParse(raw, result) {
-    const headerMatch = raw.match(/^\[\)>(?:05|06)/);
+    const headerMatch = raw.match(/^\[?\)?>?\s*\[\)>(?:05|06)/);
     if (!headerMatch) return false;
 
     const body = raw.slice(headerMatch[0].length);
@@ -211,33 +223,66 @@
 
     let pos = 0;
     let matchCount = 0;
+    const fields = {};  // key → value (first wins)
 
     while (pos < body.length) {
       let matched = false;
 
-      for (const [prefix, key] of DI_TABLE) {
+      for (const [prefix, key, isStrong] of DI_TABLE) {
         if (body.length - pos < prefix.length) continue;
         if (body.substr(pos, prefix.length) !== prefix) continue;
 
-        // Prefix matched – extract value up to the next DI boundary
-        const afterPrefix = body.slice(pos + prefix.length);
-        const vm = _VAL_RE.exec(afterPrefix);
-        // Reset lastIndex since we reuse the regex
-        _VAL_RE.lastIndex = 0;
+        // ── Single-char DI validation ──
+        if (prefix.length === 1) {
+          if (prefix === 'Q') {
+            // Q is only a DI when followed by a digit
+            if (pos + 1 >= body.length || !/\d/.test(body[pos + 1])) continue;
+          } else if (prefix === 'K' || prefix === 'P') {
+            // Only valid at position 0 or after non-alphanumeric
+            if (pos > 0 && /[A-Za-z0-9]/.test(body[pos - 1])) continue;
+          } else {
+            // S, V — too ambiguous as single-char starters, skip
+            continue;
+          }
+        }
 
-        const value = (vm && vm[1]) ? vm[1] : '';
+        // ── Weak 2-char DI validation ──
+        // Only valid as field starters at position 0 or after non-alnum
+        if (!isStrong && prefix.length === 2) {
+          if (pos > 0 && /[A-Za-z0-9]/.test(body[pos - 1])) continue;
+        }
 
-        if (value) {
-          if (key === 'quantity') {
-            const qm = value.match(/^\d+/);
-            if (qm) {
-              const q = parseInt(qm[0], 10);
-              if (!isNaN(q) && q > 0 && result.quantity === null) {
-                result.quantity = q;
-              }
-            }
-          } else if (key && !result[key]) {
-            result[key] = value;
+        // ── Extract value ──
+        const after = body.slice(pos + prefix.length);
+        let value = '';
+
+        if (key === 'quantity') {
+          // Digit-by-digit scan: stop when remaining starts with a strong DI
+          const digits = [];
+          for (let i = 0; i < after.length; i++) {
+            if (!/\d/.test(after[i])) break;
+            // After the first digit, check if this position starts a strong DI
+            if (i > 0 && _STRONG_BOUNDARY_RE.test(after.slice(i))) break;
+            digits.push(after[i]);
+          }
+          value = digits.join('');
+          if (value && !(key in fields)) {
+            const q = parseInt(value, 10);
+            if (!isNaN(q) && q > 0) fields[key] = q;
+          }
+        } else {
+          // Use STRONG boundaries only for value termination
+          const bm = _STRONG_BOUNDARY_RE.exec(after);
+          if (bm && bm.index > 0) {
+            value = after.slice(0, bm.index);
+          } else if (bm && bm.index === 0) {
+            value = '';
+          } else {
+            value = after;
+          }
+
+          if (value && key && !(key in fields)) {
+            fields[key] = value.trim();
           }
         }
 
@@ -248,10 +293,16 @@
       }
 
       if (!matched) {
-        // No DI prefix matched at this position – skip one character
         pos++;
       }
     }
+
+    // Populate result from extracted fields
+    if (fields.mpn)         result.mpn         = fields.mpn;
+    if (fields.quantity)    result.quantity     = fields.quantity;
+    if (fields.batch)       result.batch       = fields.batch;
+    if (fields.supplierSku) result.supplierSku = fields.supplierSku;
+    if (fields.poNumber)    result.poNumber    = fields.poNumber;
 
     const found = !!(result.mpn || result.quantity !== null || result.batch);
     if (found && matchCount >= 2) {

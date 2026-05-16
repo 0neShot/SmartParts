@@ -87,7 +87,9 @@ def merge_part_data(
             {
                 'source': r.source,
                 'supplier_name': r.supplier_name,
-                'supplier_sku': r.supplier_sku,
+                # Fallback: if API confirmed a match but returned no SKU,
+                # use the MPN so the supplier card is never silently dropped.
+                'supplier_sku': r.supplier_sku or r.mpn or 'UNKNOWN-SKU',
                 'supplier_url': r.supplier_url,
                 'price_breaks': [
                     {'qty': pb.quantity, 'price': pb.price, 'currency': pb.currency}

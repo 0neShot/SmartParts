@@ -74,6 +74,14 @@
   transition: background .2s; text-decoration: none;
 }
 .ps-exit-btn:hover { background: rgba(255,255,255,.25); }
+.ps-exit-home {
+  background: rgba(239,68,68,.25); border: 1px solid rgba(239,68,68,.4);
+  color: #fecaca; padding: .55rem 1.25rem; border-radius: 10px;
+  font-size: .9rem; font-weight: 700; cursor: pointer;
+  transition: all .2s; text-decoration: none;
+  display: inline-flex; align-items: center; gap: .4rem;
+}
+.ps-exit-home:hover { background: rgba(239,68,68,.45); color: #fff; }
 
 /* ── State badge ──────────────────────────────────────────────── */
 .ps-state-badge { text-align: center; padding: 1rem 2rem .25rem; flex-shrink: 0; }
@@ -362,12 +370,15 @@
       <i class="fas fa-crosshairs"></i> PureScan Terminal
     </div>
     <div class="ps-clock" id="psClock"></div>
-    <div style="display:flex;gap:.5rem;">
+    <div style="display:flex;gap:.5rem;align-items:center;">
       <a class="ps-exit-btn" href="/plugin/smartparts/purescan/commands/" target="_blank">
         <i class="fas fa-qrcode"></i> Commands
       </a>
       <a class="ps-exit-btn" href="/plugin/smartparts/">
         <i class="fas fa-arrow-left"></i> Dashboard
+      </a>
+      <a class="ps-exit-home" href="/" title="Exit to InvenTree Home">
+        <i class="fas fa-home"></i> Exit
       </a>
     </div>
   </div>

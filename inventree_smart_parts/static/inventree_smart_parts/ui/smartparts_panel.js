@@ -7,7 +7,10 @@
  */
 
 export function renderSmartPartsPanel(target, context) {
-    if (!target) return;
+    if (!target) {
+        console.warn('SmartParts: Panel target is null, aborting render.');
+        return;
+    }
 
     const PLUGIN_API = '/plugin/smartparts/api/search/';
     const CREATE_API = '/plugin/smartparts/create/';
@@ -47,11 +50,17 @@ export function renderSmartPartsPanel(target, context) {
     `;
 
     // Bind search
-    document.getElementById('sp-search-btn').addEventListener('click', function() {
-        const mpn = document.getElementById('sp-mpn').value.trim();
-        if (!mpn) return;
-        doSearch(mpn);
-    });
+    const searchBtn = document.getElementById('sp-search-btn');
+    const mpnInput = document.getElementById('sp-mpn');
+    if (searchBtn && mpnInput) {
+        searchBtn.addEventListener('click', function() {
+            const mpn = mpnInput.value.trim();
+            if (!mpn) return;
+            doSearch(mpn);
+        });
+    } else {
+        console.warn('SmartParts: Search elements not found in DOM.');
+    }
 
     function getCsrf() {
         // Loop-based extraction avoids regex backslash-escaping pitfalls
@@ -65,6 +74,7 @@ export function renderSmartPartsPanel(target, context) {
 
     function showStatus(msg, type) {
         const el = document.getElementById('sp-status');
+        if (!el) return;
         el.style.display = 'block';
         el.style.background = type === 'error' ? '#fef2f2' : type === 'success' ? '#f0fdf4' : '#f0f4ff';
         el.style.color = type === 'error' ? '#dc2626' : type === 'success' ? '#16a34a' : '#2563eb';
@@ -74,10 +84,11 @@ export function renderSmartPartsPanel(target, context) {
 
     function doSearch(mpn) {
         showStatus('⏳ Searching for <strong>' + mpn + '</strong> across all sources...', 'info');
-        document.getElementById('sp-results').style.display = 'none';
+        const resultsEl = document.getElementById('sp-results');
+        if (resultsEl) resultsEl.style.display = 'none';
 
         const btn = document.getElementById('sp-search-btn');
-        btn.disabled = true;
+        if (btn) btn.disabled = true;
 
         fetch(PLUGIN_API, {
             method: 'POST',
@@ -100,11 +111,12 @@ export function renderSmartPartsPanel(target, context) {
         })
         .then(data => renderResults(data))
         .catch(err => showStatus('❌ Search failed: ' + err.message, 'error'))
-        .finally(() => { btn.disabled = false; });
+        .finally(() => { if (btn) btn.disabled = false; });
     }
 
     function renderResults(data) {
         const container = document.getElementById('sp-results');
+        if (!container) return;
         container.style.display = 'block';
 
         if (!data.merged) {
