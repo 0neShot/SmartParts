@@ -11,12 +11,14 @@
 
 **SmartParts** is a feature-rich [InvenTree](https://inventree.org/) plugin that transforms your inventory management into a streamlined, largely automated workflow. It covers the full lifecycle from **part discovery** to **warehouse operations**:
 
+![Dashboard Overview PureScan](https://raw.githubusercontent.com/wiki/0neShot/SmartParts/images/SmartParts-dashboard-view.png)
+
 | Module | Description |
 |--------|-------------|
-| **🔍 MPN Lookup** | Scan a distributor bag barcode → auto-search Mouser, DigiKey, and LCSC APIs → create the part with full specs, images, and parameters |
-| **📦 Batch BOM Import** | Drag & drop an Altium Designer BOM (`.csv`/`.xlsx`) → intelligent column mapping → bulk part creation with category learning |
-| **🎯 PureScan Terminal** | 100% mouse-free warehouse terminal — Transfer, Add, Remove, Stocktake, Info, and Undo via sequential barcode scans |
-| **🖨 Auto Label Printing** | Every stock transfer or receive triggers automatic label printing to Dymo/Zebra printers |
+| **MPN Lookup** | Scan a distributor bag barcode → auto-search Mouser, DigiKey, and LCSC APIs → create the part with full specs, images, and parameters |
+| **Batch BOM Import** | Drag & drop an Altium Designer BOM (`.csv`/`.xlsx`) → intelligent column mapping → bulk part creation with category learning |
+| **PureScan Terminal** | 100% mouse-free warehouse terminal — Transfer, Add, Remove, Stocktake, Info, and Undo via sequential barcode scans |
+| **Auto Label Printing** | Every stock transfer or receive triggers automatic label printing to Dymo/Zebra printers |
 
 ## Requirements
 
@@ -44,35 +46,6 @@ You can install the plugin directly through the InvenTree web interface without 
 4. Click **Install**. 
 
 Then restart InvenTree and activate the plugin in **Admin → Plugins**.
-
-### Method 2: Manual install
-
-1. Clone or download this repository
-2. Copy the entire folder into your InvenTree plugins directory:
-   ```
-   /path/to/inventree/data/plugins/
-   ```
-3. Install the package:
-   ```bash
-   cd /path/to/inventree/data/plugins/
-   pip install -e .
-   ```
-4. Restart InvenTree
-
-### Method 3: Docker
-
-Add to your `docker-compose.yml` under the InvenTree service:
-
-```yaml
-environment:
-  INVENTREE_PLUGINS_ENABLED: "true"
-  INVENTREE_PLUGIN_FILE: "/home/inventree/data/plugins/plugins.txt"
-```
-
-And add to `plugins.txt`:
-```
-git+https://github.com/0neShot/SmartParts.git
-```
 
 ## Configuration
 
@@ -128,6 +101,8 @@ After installation, navigate to **InvenTree → Admin → Plugins → SmartParts
 
 PureScan is a full-screen, 100% keyboard-free warehouse terminal controlled entirely by barcode scanning.
 
+![Dashboard Overview PureScan](https://raw.githubusercontent.com/wiki/0neShot/SmartParts/images/PureScan-terminal-view.png)
+
 #### Getting Started
 
 1. Open PureScan from the SmartParts dashboard
@@ -144,14 +119,14 @@ Scan ACTION code → Scan ITEM barcode → [Scan QTY codes] → Auto-execute
 
 | Code | Action | Description |
 |------|--------|-------------|
-| `SYS:TRANSFER` | 🔄 Transfer | Move stock to a new location |
-| `SYS:ADD` | ➕ Add | Add quantity to stock |
-| `SYS:REMOVE` | ➖ Remove | Remove quantity (with depletion safeguard) |
-| `SYS:STOCKTAKE` | 📋 Stocktake | Set exact count |
-| `SYS:INFO` | ℹ️ Info | Lookup stock item or location details |
-| `SYS:UNDO` | ↩️ Undo | Revert the last action |
-| `SYS:CANCEL` | ❌ Cancel | Reset to idle |
-| `SYS:CLEARLOG` | 🗑 Clear | Clear the action log |
+| `SYS:TRANSFER` | Transfer | Move stock to a new location |
+| `SYS:ADD` | Add | Add quantity to stock |
+| `SYS:REMOVE` | Remove | Remove quantity (with depletion safeguard) |
+| `SYS:STOCKTAKE` | Stocktake | Set exact count |
+| `SYS:INFO` | Info | Lookup stock item or location details |
+| `SYS:UNDO` | Undo | Revert the last action |
+| `SYS:CANCEL` | Cancel | Reset to idle |
+| `SYS:CLEARLOG` | Clear | Clear the action log |
 
 #### Quantity Combo System
 
