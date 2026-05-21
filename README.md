@@ -37,6 +37,12 @@
 ### Method 1: UI install (recommended)
 
 You can install the plugin directly through the InvenTree web interface without touching the command line.
+Make sure to enable:
+- Enable App integration
+- Enable URL integration
+- Enable navigation integration
+- Enable interface integration
+- Enable event integration
 
 1. Navigate to **Settings** -> **Plugins** in your InvenTree instance.
 2. Click on the **Install Plugin** button.
