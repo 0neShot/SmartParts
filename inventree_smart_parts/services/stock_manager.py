@@ -213,9 +213,17 @@ def print_stock_label(
     Trigger InvenTree's built-in label print for a StockItem.
 
     Routing strategy:
-      1. POST to InvenTree's native /api/label/print/ endpoint (handles all
-         plugin types including machine-driver-based ones like Dymo).
-      2. If the API approach fails, fall back to direct template.print().
+      1. Direct template.print() with the resolved LabelPrintingMixin plugin.
+         For machine-based printers (inventreelabelmachine / Dymo), the machine
+         UUID is resolved automatically from MachineConfig and passed via the
+         options dict so inventreelabelmachine.print_labels() can select it.
+      2. Legacy StockItemLabel fallback (InvenTree < 0.13).
+
+    NOTE: We intentionally bypass the /api/label/print/ REST endpoint.
+    That path requires machine-specific serializer fields (e.g. a machine UUID
+    ChoiceField built dynamically from the request context) that cannot be
+    satisfied by a synthetic RequestFactory request. template.print() is the
+    correct internal API.
 
     The ``plugin_slug`` should be the **key** of a LabelPrintingMixin plugin
     (e.g. ``inventreelabelmachine`` for machine-routed printers like Dymo,
@@ -233,22 +241,7 @@ def print_stock_label(
     # ── Resolve the print plugin ──────────────────────────────────────────
     resolved_key = _resolve_print_plugin_key(plugin_slug)
 
-    # ── Strategy 1: Native InvenTree API (preferred) ──────────────────────
-    if request:
-        try:
-            api_result = _print_via_api(
-                stock_item_id=stock_item_id,
-                template_id=template_id,
-                plugin_key=resolved_key,
-                request=request,
-            )
-            if api_result['success']:
-                return api_result
-            logger.warning(f'API print failed: {api_result["message"]}, trying direct method')
-        except Exception as e:
-            logger.warning(f'API print exception: {e}, trying direct method')
-
-    # ── Strategy 2: Direct template.print() ───────────────────────────────
+    # ── Strategy 1: Direct template.print() ───────────────────────────────
     try:
         from report.models import LabelTemplate
         template = LabelTemplate.objects.get(pk=template_id)
@@ -275,24 +268,31 @@ def print_stock_label(
                 ),
             }
 
+        # Build printing options.
+        # inventreelabelmachine requires {'machine': <uuid>} so it knows which
+        # physical printer to route the job to.
+        options = _build_printing_options(output_plugin)
+
         output = template.print(
             items=[stock_item],
             plugin=output_plugin,
+            options=options,
             request=request,
         )
         logger.info(
             f'Label printed (direct): StockItem {stock_item_id} via template '
             f'"{template.name}" using plugin "{output_plugin.slug}"'
+            + (f' machine={options.get("machine")}' if options.get('machine') else '')
         )
         return {'success': True, 'message': f'Label sent to "{output_plugin.name}" successfully'}
 
     except ImportError:
-        logger.debug('report.models.LabelTemplate not available, trying legacy API')
+        logger.debug('report.models.LabelTemplate not available, trying legacy fallback')
     except Exception as e:
         logger.error(f'Label print failed (direct): {e}', exc_info=True)
         return {'success': False, 'message': f'Label print error: {e}'}
 
-    # ── Strategy 3: Legacy fallback (InvenTree < 0.13) ────────────────────
+    # ── Strategy 2: Legacy fallback (InvenTree < 0.13) ────────────────────
     try:
         from label.models import StockItemLabel  # type: ignore[import]
         from label.views import StockItemLabelPrint  # type: ignore[import]
@@ -314,6 +314,41 @@ def print_stock_label(
     except Exception as e:
         logger.error(f'Label print failed (legacy API): {e}', exc_info=True)
         return {'success': False, 'message': f'Label print error (legacy): {e}'}
+
+
+def _build_printing_options(plugin) -> dict:
+    """Return the options dict required by the given label printing plugin.
+
+    For ``inventreelabelmachine`` (slug contains 'machine'), InvenTree's
+    built-in machine label plugin reads
+    ``printing_options.get('machine', '')`` to select the physical printer.
+    We auto-resolve the first active label-printer machine from MachineConfig.
+
+    For all other plugins (e.g. inventreelabel / PDF) no extra options are needed.
+    """
+    slug = getattr(plugin, 'slug', '') or ''
+
+    # Only machine-based plugins need a machine UUID
+    if 'machine' not in slug.lower():
+        return {}
+
+    try:
+        from machine.models import MachineConfig
+        machines = MachineConfig.objects.filter(active=True, machine_type='label-printer')
+        machine = machines.first()
+        if machine:
+            machine_pk = str(machine.pk)
+            logger.info(
+                f'_build_printing_options: auto-selected machine '
+                f'pk={machine_pk} name={machine.name}'
+            )
+            return {'machine': machine_pk}
+        else:
+            logger.warning('_build_printing_options: no active label-printer machine found in DB')
+    except Exception as e:
+        logger.warning(f'_build_printing_options: could not resolve machine: {e}')
+
+    return {}
 
 
 def _resolve_print_plugin_key(plugin_slug: str) -> str:
@@ -362,59 +397,3 @@ def _resolve_print_plugin_key(plugin_slug: str) -> str:
         return default
 
     return slug
-
-
-def _print_via_api(
-    stock_item_id: int,
-    template_id: int,
-    plugin_key: str,
-    request,
-) -> dict:
-    """Call InvenTree's native POST /api/label/print/ endpoint internally.
-
-    This ensures correct routing through all plugin types including
-    machine-driver-based printers (Dymo, Zebra via machine registry).
-    """
-    import json as _json
-    from django.test import RequestFactory
-
-    payload = {
-        'template': template_id,
-        'items': [stock_item_id],
-    }
-    if plugin_key:
-        payload['plugin'] = plugin_key
-
-    factory = RequestFactory()
-    internal_req = factory.post(
-        '/api/label/print/',
-        data=_json.dumps(payload),
-        content_type='application/json',
-    )
-    # Copy auth from the original request
-    internal_req.user = getattr(request, 'user', None)
-    if hasattr(request, 'META'):
-        for key in ('HTTP_COOKIE', 'HTTP_AUTHORIZATION', 'CSRF_COOKIE'):
-            if key in request.META:
-                internal_req.META[key] = request.META[key]
-
-    try:
-        from report.api import LabelPrint
-        view = LabelPrint.as_view()
-        response = view(internal_req)
-
-        if response.status_code in (200, 201):
-            logger.info(
-                f'Label printed (API): StockItem {stock_item_id}, '
-                f'template={template_id}, plugin={plugin_key}'
-            )
-            return {'success': True, 'message': f'Label sent via {plugin_key or "default"} printer'}
-        else:
-            body = getattr(response, 'data', {}) or {}
-            err = body.get('detail', '') or str(body)
-            return {'success': False, 'message': f'API returned {response.status_code}: {err}'}
-
-    except Exception as e:
-        logger.error(f'Internal API print call failed: {e}', exc_info=True)
-        return {'success': False, 'message': f'API print error: {e}'}
-
