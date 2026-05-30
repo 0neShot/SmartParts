@@ -11,11 +11,11 @@ from .digikey import DigiKeyClient
 from .lcsc import LCSCClient
 
 __all__ = [
-    'BaseApiClient',
-    'PartData',
-    'PriceBreak',
-    'PartParameter',
-    'MouserClient',
-    'DigiKeyClient',
-    'LCSCClient',
+    "BaseApiClient",
+    "PartData",
+    "PriceBreak",
+    "PartParameter",
+    "MouserClient",
+    "DigiKeyClient",
+    "LCSCClient",
 ]

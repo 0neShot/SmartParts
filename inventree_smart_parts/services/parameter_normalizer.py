@@ -12,29 +12,31 @@ import logging
 from typing import Optional, Tuple
 from dataclasses import dataclass
 
-logger = logging.getLogger('inventree_smart_parts.services.normalizer')
+logger = logging.getLogger("inventree_smart_parts.services.normalizer")
 
 
 # ═══════════════════════════════════════════════════════════════════
 #  SI Prefix System
 # ═══════════════════════════════════════════════════════════════════
 
+
 @dataclass
 class SIPrefix:
     symbol: str
     name: str
-    exponent: int   # power of 10
+    exponent: int  # power of 10
+
 
 SI_PREFIXES = [
-    SIPrefix('p',  'pico',  -12),
-    SIPrefix('n',  'nano',  -9),
-    SIPrefix('µ',  'micro', -6),
-    SIPrefix('m',  'milli', -3),
-    SIPrefix('',   '',       0),
-    SIPrefix('k',  'kilo',   3),
-    SIPrefix('M',  'mega',   6),
-    SIPrefix('G',  'giga',   9),
-    SIPrefix('T',  'tera',  12),
+    SIPrefix("p", "pico", -12),
+    SIPrefix("n", "nano", -9),
+    SIPrefix("µ", "micro", -6),
+    SIPrefix("m", "milli", -3),
+    SIPrefix("", "", 0),
+    SIPrefix("k", "kilo", 3),
+    SIPrefix("M", "mega", 6),
+    SIPrefix("G", "giga", 9),
+    SIPrefix("T", "tera", 12),
 ]
 
 # Lookup: symbol/alias → SIPrefix
@@ -44,41 +46,44 @@ for _p in SI_PREFIXES:
         _PREFIX_MAP[_p.symbol] = _p
     if _p.name:
         _PREFIX_MAP[_p.name] = _p
-        _PREFIX_MAP[_p.name + 's'] = _p  # plurals (e.g. "microfarads")
+        _PREFIX_MAP[_p.name + "s"] = _p  # plurals (e.g. "microfarads")
 # Common aliases
-_PREFIX_MAP['u']     = _PREFIX_MAP['µ']       # ASCII u for micro
-_PREFIX_MAP['μ']     = _PREFIX_MAP['µ']       # Greek mu
-_PREFIX_MAP['micro'] = _PREFIX_MAP['µ']
+_PREFIX_MAP["u"] = _PREFIX_MAP["µ"]  # ASCII u for micro
+_PREFIX_MAP["μ"] = _PREFIX_MAP["µ"]  # Greek mu
+_PREFIX_MAP["micro"] = _PREFIX_MAP["µ"]
 
 
 # ═══════════════════════════════════════════════════════════════════
 #  Unit Definitions
 # ═══════════════════════════════════════════════════════════════════
 
+
 @dataclass
 class UnitDef:
     """Defines a base unit with its canonical symbol and recognized aliases."""
-    symbol: str                # Canonical: "F", "Ω", "V", ...
-    category: str              # "capacitance", "resistance", ...
-    aliases: tuple             # Alternative spellings
+
+    symbol: str  # Canonical: "F", "Ω", "V", ...
+    category: str  # "capacitance", "resistance", ...
+    aliases: tuple  # Alternative spellings
     preferred_prefixes: tuple  # Preferred SI prefix exponents for display
 
+
 UNITS = [
-    UnitDef('F',  'capacitance',  ('farad', 'farads', 'fd'),          (-12, -9, -6)),
-    UnitDef('Ω',  'resistance',   ('ohm', 'ohms', 'r'),              (0, 3, 6)),
-    UnitDef('H',  'inductance',   ('henry', 'henrys', 'henries'),     (-9, -6, -3)),
-    UnitDef('V',  'voltage',      ('volt', 'volts'),                  (-3, 0, 3)),
-    UnitDef('A',  'current',      ('amp', 'amps', 'ampere', 'amperes'), (-9, -6, -3, 0)),
-    UnitDef('W',  'power',        ('watt', 'watts'),                  (-6, -3, 0, 3)),
-    UnitDef('Hz', 'frequency',    ('hertz',),                         (0, 3, 6, 9)),
-    UnitDef('°C', 'temperature',  ('c', 'celsius', 'deg c', 'degc'),  (0,)),
-    UnitDef('°F', 'temperature',  ('fahrenheit', 'deg f', 'degf'),    (0,)),
-    UnitDef('K',  'temperature',  ('kelvin',),                        (0,)),
-    UnitDef('s',  'time',         ('sec', 'second', 'seconds'),       (-9, -6, -3, 0)),
-    UnitDef('m',  'length',       ('meter', 'meters', 'metre'),       (-3, 0)),
-    UnitDef('%',  'percentage',   ('percent', 'pct'),                 (0,)),
-    UnitDef('dB', 'decibel',      ('decibel', 'decibels'),            (0,)),
-    UnitDef('ppm','concentration',('ppm',),                           (0,)),
+    UnitDef("F", "capacitance", ("farad", "farads", "fd"), (-12, -9, -6)),
+    UnitDef("Ω", "resistance", ("ohm", "ohms", "r"), (0, 3, 6)),
+    UnitDef("H", "inductance", ("henry", "henrys", "henries"), (-9, -6, -3)),
+    UnitDef("V", "voltage", ("volt", "volts"), (-3, 0, 3)),
+    UnitDef("A", "current", ("amp", "amps", "ampere", "amperes"), (-9, -6, -3, 0)),
+    UnitDef("W", "power", ("watt", "watts"), (-6, -3, 0, 3)),
+    UnitDef("Hz", "frequency", ("hertz",), (0, 3, 6, 9)),
+    UnitDef("°C", "temperature", ("c", "celsius", "deg c", "degc"), (0,)),
+    UnitDef("°F", "temperature", ("fahrenheit", "deg f", "degf"), (0,)),
+    UnitDef("K", "temperature", ("kelvin",), (0,)),
+    UnitDef("s", "time", ("sec", "second", "seconds"), (-9, -6, -3, 0)),
+    UnitDef("m", "length", ("meter", "meters", "metre"), (-3, 0)),
+    UnitDef("%", "percentage", ("percent", "pct"), (0,)),
+    UnitDef("dB", "decibel", ("decibel", "decibels"), (0,)),
+    UnitDef("ppm", "concentration", ("ppm",), (0,)),
 ]
 
 # Build lookup: alias → UnitDef
@@ -88,20 +93,21 @@ for _u in UNITS:
     for _a in _u.aliases:
         _UNIT_MAP[_a.lower()] = _u
 # Ω aliases
-_UNIT_MAP['ω'] = _UNIT_MAP['ω'] if 'ω' in _UNIT_MAP else _UNIT_MAP.get('ohm')
+_UNIT_MAP["ω"] = _UNIT_MAP["ω"] if "ω" in _UNIT_MAP else _UNIT_MAP.get("ohm")
 
 
 # ═══════════════════════════════════════════════════════════════════
 #  Resistor / Capacitor Shorthand Parser  (e.g. "4k7", "2R2")
 # ═══════════════════════════════════════════════════════════════════
 
-_SHORTHAND_RE = re.compile(
-    r'^(\d+)([RrKkMm])(\d+)$'
-)
+_SHORTHAND_RE = re.compile(r"^(\d+)([RrKkMm])(\d+)$")
 _SHORTHAND_UNIT = {
-    'r': ('Ω', 0), 'R': ('Ω', 0),
-    'k': ('Ω', 3), 'K': ('Ω', 3),
-    'm': ('Ω', 6), 'M': ('Ω', 6),  # In EE shorthand, M = Mega for resistance
+    "r": ("Ω", 0),
+    "R": ("Ω", 0),
+    "k": ("Ω", 3),
+    "K": ("Ω", 3),
+    "m": ("Ω", 6),
+    "M": ("Ω", 6),  # In EE shorthand, M = Mega for resistance
 }
 
 
@@ -114,7 +120,7 @@ def _parse_shorthand(raw: str) -> Optional[Tuple[float, str, int]]:
     if not m:
         return None
     integer, letter, decimal = m.group(1), m.group(2), m.group(3)
-    if letter.upper() not in ('R', 'K', 'M'):
+    if letter.upper() not in ("R", "K", "M"):
         return None
     value = float(f"{integer}.{decimal}")
     unit_sym, exp = _SHORTHAND_UNIT[letter]
@@ -127,15 +133,13 @@ def _parse_shorthand(raw: str) -> Optional[Tuple[float, str, int]]:
 
 # Regex to split "10.5kΩ", "100 nF", "4.7uF", "-40°C" etc.
 _VALUE_UNIT_RE = re.compile(
-    r'^([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)'   # numeric value
-    r'\s*'                                        # optional space
-    r'(.+)?$'                                     # unit string (rest)
+    r"^([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)"  # numeric value
+    r"\s*"  # optional space
+    r"(.+)?$"  # unit string (rest)
 )
 
 # Regex for pure scientific notation like "0.00001F"
-_SCI_FULL_RE = re.compile(
-    r'^([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)$'
-)
+_SCI_FULL_RE = re.compile(r"^([+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)$")
 
 
 def _find_unit_and_prefix(unit_str: str) -> Optional[Tuple[UnitDef, SIPrefix]]:
@@ -169,7 +173,7 @@ def _find_unit_and_prefix(unit_str: str) -> Optional[Tuple[UnitDef, SIPrefix]]:
     raw_lower = raw.lower()
     for pfx in SI_PREFIXES:
         if pfx.name and raw_lower.startswith(pfx.name):
-            remainder = raw_lower[len(pfx.name):]
+            remainder = raw_lower[len(pfx.name) :]
             u = _UNIT_MAP.get(remainder)
             if u:
                 return u, pfx
@@ -177,13 +181,15 @@ def _find_unit_and_prefix(unit_str: str) -> Optional[Tuple[UnitDef, SIPrefix]]:
     return None
 
 
-def _choose_best_prefix(value: float, unit: UnitDef, current_exp: int) -> Tuple[float, SIPrefix]:
+def _choose_best_prefix(
+    value: float, unit: UnitDef, current_exp: int
+) -> Tuple[float, SIPrefix]:
     """
     Choose the best SI prefix so the displayed value is in [1, 1000).
     Prefers the unit's preferred_prefixes when possible.
     """
     # Absolute value in base units
-    abs_base = abs(value) * (10.0 ** current_exp)
+    abs_base = abs(value) * (10.0**current_exp)
     if abs_base == 0:
         return 0.0, SI_PREFIXES[4]
 
@@ -196,7 +202,7 @@ def _choose_best_prefix(value: float, unit: UnitDef, current_exp: int) -> Tuple[
     for pfx in SI_PREFIXES:
         if pfx.exponent not in unit.preferred_prefixes and pfx.exponent != 0:
             continue
-        candidate = abs_base / (10.0 ** pfx.exponent)
+        candidate = abs_base / (10.0**pfx.exponent)
         score = _niceness(candidate)
         if score < best_score:
             best_score = score
@@ -211,6 +217,7 @@ def _niceness(v: float) -> float:
     if v == 0:
         return 0
     import math
+
     log = math.log10(abs(v))
     # Ideal range: 0 ≤ log < 3  →  1 to 999
     if 0 <= log < 3:
@@ -223,7 +230,7 @@ def _format_value(v: float) -> str:
     if v == int(v) and abs(v) < 1e12:
         return str(int(v))
     # Up to 6 decimal places, strip trailing zeros
-    formatted = f"{v:.6f}".rstrip('0').rstrip('.')
+    formatted = f"{v:.6f}".rstrip("0").rstrip(".")
     return formatted
 
 
@@ -231,16 +238,18 @@ def _format_value(v: float) -> str:
 #  Public API
 # ═══════════════════════════════════════════════════════════════════
 
+
 @dataclass
 class NormalizedParam:
     """Result of normalizing a parameter."""
+
     name: str
     value: str
     unit: str
     normalized: bool = False  # True if normalization was applied
 
 
-def normalize_parameter(name: str, value: str, unit: str = '') -> NormalizedParam:
+def normalize_parameter(name: str, value: str, unit: str = "") -> NormalizedParam:
     """
     Normalize a single parameter's value and unit.
 
@@ -322,8 +331,8 @@ def normalize_parameter_list(parameters: list) -> list:
 
     result = []
     for p in parameters:
-        name = p.get('name', '')
-        value = p.get('value', '')
+        name = p.get("name", "")
+        value = p.get("value", "")
 
         # Skip parameters without a name or with a useless value
         if not name or is_useless_value(value):
@@ -332,12 +341,14 @@ def normalize_parameter_list(parameters: list) -> list:
         n = normalize_parameter(
             name=name,
             value=value,
-            unit=p.get('unit', ''),
+            unit=p.get("unit", ""),
         )
-        result.append({
-            'name': n.name,
-            'value': n.value,
-            'unit': n.unit,
-            '_normalized': n.normalized,
-        })
+        result.append(
+            {
+                "name": n.name,
+                "value": n.value,
+                "unit": n.unit,
+                "_normalized": n.normalized,
+            }
+        )
     return result

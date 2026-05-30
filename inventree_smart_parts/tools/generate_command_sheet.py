@@ -15,23 +15,33 @@ import sys
 # ── Control codes ──────────────────────────────────────────────────────────
 COMMANDS = [
     # Actions
-    {'code': 'SYS:TRANSFER',  'label': 'Transfer Stock',    'icon': '🔄', 'color': '#f59e0b'},
-    {'code': 'SYS:INFO',      'label': 'Info / Lookup',     'icon': 'ℹ️',  'color': '#3b82f6'},
-    {'code': 'SYS:ADD',       'label': 'Add Stock',         'icon': '➕', 'color': '#10b981'},
-    {'code': 'SYS:REMOVE',    'label': 'Remove Stock',      'icon': '➖', 'color': '#ef4444'},
-    {'code': 'SYS:STOCKTAKE', 'label': 'Stocktake',         'icon': '📋', 'color': '#8b5cf6'},
-    {'code': 'SYS:CANCEL',    'label': 'Cancel / Reset',    'icon': '❌', 'color': '#64748b'},
-    {'code': 'SYS:UNDO',      'label': 'Undo Last',         'icon': '↩️',  'color': '#f59e0b'},
+    {
+        "code": "SYS:TRANSFER",
+        "label": "Transfer Stock",
+        "icon": "🔄",
+        "color": "#f59e0b",
+    },
+    {"code": "SYS:INFO", "label": "Info / Lookup", "icon": "ℹ️", "color": "#3b82f6"},
+    {"code": "SYS:ADD", "label": "Add Stock", "icon": "➕", "color": "#10b981"},
+    {"code": "SYS:REMOVE", "label": "Remove Stock", "icon": "➖", "color": "#ef4444"},
+    {"code": "SYS:STOCKTAKE", "label": "Stocktake", "icon": "📋", "color": "#8b5cf6"},
+    {"code": "SYS:CANCEL", "label": "Cancel / Reset", "icon": "❌", "color": "#64748b"},
+    {"code": "SYS:UNDO", "label": "Undo Last", "icon": "↩️", "color": "#f59e0b"},
     # Quantities
-    {'code': 'SYS:QTY:1',     'label': 'Quantity: 1',       'icon': '#',  'color': '#6b7280'},
-    {'code': 'SYS:QTY:5',     'label': 'Quantity: 5',       'icon': '#',  'color': '#6b7280'},
-    {'code': 'SYS:QTY:10',    'label': 'Quantity: 10',      'icon': '#',  'color': '#6b7280'},
-    {'code': 'SYS:QTY:25',    'label': 'Quantity: 25',      'icon': '#',  'color': '#6b7280'},
-    {'code': 'SYS:QTY:50',    'label': 'Quantity: 50',      'icon': '#',  'color': '#6b7280'},
-    {'code': 'SYS:QTY:100',   'label': 'Quantity: 100',     'icon': '#',  'color': '#6b7280'},
-    {'code': 'SYS:QTY:250',   'label': 'Quantity: 250',     'icon': '#',  'color': '#6b7280'},
-    {'code': 'SYS:QTY:500',   'label': 'Quantity: 500',     'icon': '#',  'color': '#6b7280'},
-    {'code': 'SYS:QTY:1000',  'label': 'Quantity: 1000',    'icon': '#',  'color': '#6b7280'},
+    {"code": "SYS:QTY:1", "label": "Quantity: 1", "icon": "#", "color": "#6b7280"},
+    {"code": "SYS:QTY:5", "label": "Quantity: 5", "icon": "#", "color": "#6b7280"},
+    {"code": "SYS:QTY:10", "label": "Quantity: 10", "icon": "#", "color": "#6b7280"},
+    {"code": "SYS:QTY:25", "label": "Quantity: 25", "icon": "#", "color": "#6b7280"},
+    {"code": "SYS:QTY:50", "label": "Quantity: 50", "icon": "#", "color": "#6b7280"},
+    {"code": "SYS:QTY:100", "label": "Quantity: 100", "icon": "#", "color": "#6b7280"},
+    {"code": "SYS:QTY:250", "label": "Quantity: 250", "icon": "#", "color": "#6b7280"},
+    {"code": "SYS:QTY:500", "label": "Quantity: 500", "icon": "#", "color": "#6b7280"},
+    {
+        "code": "SYS:QTY:1000",
+        "label": "Quantity: 1000",
+        "icon": "#",
+        "color": "#6b7280",
+    },
 ]
 
 
@@ -40,16 +50,19 @@ def generate_qr_svg(text: str, box_size: int = 4) -> str:
     try:
         import qrcode
         import qrcode.image.svg
+
         qr = qrcode.QRCode(
-            version=1, error_correction=qrcode.constants.ERROR_CORRECT_M,
-            box_size=box_size, border=2,
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=box_size,
+            border=2,
         )
         qr.add_data(text)
         qr.make(fit=True)
         factory = qrcode.image.svg.SvgPathImage
         img = qr.make_image(image_factory=factory)
         svg_bytes = img.to_string()
-        return svg_bytes.decode('utf-8')
+        return svg_bytes.decode("utf-8")
     except ImportError:
         # Fallback: large text
         return f'<div style="font-size:1.2rem;font-weight:700;padding:1rem;word-break:break-all">{html.escape(text)}</div>'
@@ -58,17 +71,17 @@ def generate_qr_svg(text: str, box_size: int = 4) -> str:
 def generate_html() -> str:
     cards_html = []
     for cmd in COMMANDS:
-        qr = generate_qr_svg(cmd['code'])
-        cards_html.append(f'''
+        qr = generate_qr_svg(cmd["code"])
+        cards_html.append(f"""
         <div class="card">
             <div class="qr">{qr}</div>
             <div class="label" style="color:{cmd['color']}">
                 <span class="icon">{cmd['icon']}</span> {html.escape(cmd['label'])}
             </div>
             <div class="code">{html.escape(cmd['code'])}</div>
-        </div>''')
+        </div>""")
 
-    return f'''<!DOCTYPE html>
+    return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -99,14 +112,14 @@ h1 {{ text-align: center; font-size: 1.5rem; margin-bottom: .25rem; }}
 <div class="grid">{"".join(cards_html)}</div>
 <p class="footer">Generated by Smart Parts Plugin – Print this sheet and place at warehouse workstations</p>
 </body>
-</html>'''
+</html>"""
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     output = generate_html()
-    if len(sys.argv) > 1 and sys.argv[1] not in ('-',):
-        with open(sys.argv[1], 'w', encoding='utf-8') as f:
+    if len(sys.argv) > 1 and sys.argv[1] not in ("-",):
+        with open(sys.argv[1], "w", encoding="utf-8") as f:
             f.write(output)
-        print(f'Command sheet saved to: {sys.argv[1]}', file=sys.stderr)
+        print(f"Command sheet saved to: {sys.argv[1]}", file=sys.stderr)
     else:
         print(output)

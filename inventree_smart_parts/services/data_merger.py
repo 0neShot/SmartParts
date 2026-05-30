@@ -9,13 +9,19 @@ import logging
 from typing import List, Optional
 from ..api_clients.base import PartData, PriceBreak, PartParameter
 
-logger = logging.getLogger('inventree_smart_parts.services.merger')
+logger = logging.getLogger("inventree_smart_parts.services.merger")
 
 # Fields to merge (in order of importance)
 MERGEABLE_FIELDS = [
-    'mpn', 'manufacturer', 'description', 'name',
-    'category', 'subcategory', 'datasheet_url', 'image_url',
-    'package',
+    "mpn",
+    "manufacturer",
+    "description",
+    "name",
+    "category",
+    "subcategory",
+    "datasheet_url",
+    "image_url",
+    "package",
 ]
 
 
@@ -44,7 +50,7 @@ def merge_part_data(
 
     # Default priority
     if priority_order is None:
-        priority_order = ['mouser', 'digikey', 'lcsc']
+        priority_order = ["mouser", "digikey", "lcsc"]
 
     # Sort results by priority
     def sort_key(pd: PartData) -> int:
@@ -77,38 +83,40 @@ def merge_part_data(
     merged.price_breaks = sorted_results[0].price_breaks if sorted_results else []
 
     # Source metadata
-    merged.source = 'merged'
+    merged.source = "merged"
     merged.confidence = max(r.confidence for r in sorted_results)
 
     # Collect all supplier info for later use
     merged.raw_data = {
-        'merged_sources': [r.source for r in sorted_results],
-        'supplier_data': [
+        "merged_sources": [r.source for r in sorted_results],
+        "supplier_data": [
             {
-                'source': r.source,
-                'supplier_name': r.supplier_name,
+                "source": r.source,
+                "supplier_name": r.supplier_name,
                 # Fallback: if API confirmed a match but returned no SKU,
                 # use the MPN so the supplier card is never silently dropped.
-                'supplier_sku': r.supplier_sku or r.mpn or 'UNKNOWN-SKU',
-                'supplier_url': r.supplier_url,
-                'price_breaks': [
-                    {'qty': pb.quantity, 'price': pb.price, 'currency': pb.currency}
+                "supplier_sku": r.supplier_sku or r.mpn or "UNKNOWN-SKU",
+                "supplier_url": r.supplier_url,
+                "price_breaks": [
+                    {"qty": pb.quantity, "price": pb.price, "currency": pb.currency}
                     for pb in r.price_breaks
                 ],
-                'stock': r.stock_available,
+                "stock": r.stock_available,
             }
             for r in sorted_results
         ],
         # Per-source datasheet URLs so downstream code can fall back if the
         # merged value is empty (highest-priority source may have no datasheet).
-        'source_datasheet_urls': [
-            {'source': r.source, 'url': r.datasheet_url}
+        "source_datasheet_urls": [
+            {"source": r.source, "url": r.datasheet_url}
             for r in sorted_results
-            if r.datasheet_url and r.datasheet_url.startswith('http')
+            if r.datasheet_url and r.datasheet_url.startswith("http")
         ],
     }
 
-    logger.info(f"Merged result: {merged.mpn} ({merged.manufacturer}) – {len(sorted_results)} source(s)")
+    logger.info(
+        f"Merged result: {merged.mpn} ({merged.manufacturer}) – {len(sorted_results)} source(s)"
+    )
     return merged
 
 

@@ -9,18 +9,19 @@ at plugin load time without a fully-initialised Django environment.
 import logging
 from typing import Optional
 
-logger = logging.getLogger('inventree_smart_parts.services.stock')
+logger = logging.getLogger("inventree_smart_parts.services.stock")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  StockItem creation
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def create_stock_item(
     part_id: int,
     quantity: float,
     location_id: Optional[int] = None,
-    batch: str = '',
+    batch: str = "",
     delete_on_deplete: bool = True,
     user=None,
 ) -> dict:
@@ -43,20 +44,23 @@ def create_stock_item(
         part = Part.objects.get(pk=part_id)
 
         kwargs = {
-            'part': part,
-            'quantity': quantity,
-            'delete_on_deplete': delete_on_deplete,
+            "part": part,
+            "quantity": quantity,
+            "delete_on_deplete": delete_on_deplete,
         }
 
         if location_id:
             from stock.models import StockLocation
+
             try:
-                kwargs['location'] = StockLocation.objects.get(pk=location_id)
+                kwargs["location"] = StockLocation.objects.get(pk=location_id)
             except StockLocation.DoesNotExist:
-                logger.warning(f'StockLocation {location_id} not found – creating without location')
+                logger.warning(
+                    f"StockLocation {location_id} not found – creating without location"
+                )
 
         if batch:
-            kwargs['batch'] = batch[:100]
+            kwargs["batch"] = batch[:100]
 
         stock_item = StockItem.objects.create(**kwargs)
 
@@ -65,42 +69,58 @@ def create_stock_item(
         # in-place instead of appending a second one (which caused the duplicate).
         try:
             from stock.models import StockItemTracking
+
             auto_entry = (
-                StockItemTracking.objects
-                .filter(item=stock_item, tracking_type=StockHistoryCode.CREATED)
-                .order_by('pk')
+                StockItemTracking.objects.filter(
+                    item=stock_item, tracking_type=StockHistoryCode.CREATED
+                )
+                .order_by("pk")
                 .last()
             )
             if auto_entry is not None:
                 auto_entry.user = user
-                auto_entry.notes = 'Created via Smart Parts plugin'
-                auto_entry.save(update_fields=['user', 'notes'])
+                auto_entry.notes = "Created via Smart Parts plugin"
+                auto_entry.save(update_fields=["user", "notes"])
             else:
                 # No auto-entry exists (older InvenTree) – create one manually.
-                deltas: dict = {'quantity': float(quantity), 'status': stock_item.status}
-                if kwargs.get('location'):
-                    deltas['location'] = kwargs['location'].pk
+                deltas: dict = {
+                    "quantity": float(quantity),
+                    "status": stock_item.status,
+                }
+                if kwargs.get("location"):
+                    deltas["location"] = kwargs["location"].pk
                 stock_item.add_tracking_entry(
                     StockHistoryCode.CREATED,
                     user,
                     deltas=deltas,
-                    notes='Created via Smart Parts plugin',
+                    notes="Created via Smart Parts plugin",
                 )
         except Exception as te:
             # Non-fatal – the stock item is created; just log the tracking failure
-            logger.warning(f'Could not update tracking entry for StockItem {stock_item.pk}: {te}')
+            logger.warning(
+                f"Could not update tracking entry for StockItem {stock_item.pk}: {te}"
+            )
 
-        logger.info(f'Created StockItem {stock_item.pk} for Part {part_id} (qty={quantity}, user={getattr(user, "username", "anon")})')
-        return {'success': True, 'stock_id': stock_item.pk, 'message': f'Stock item created (ID {stock_item.pk})'}
+        logger.info(
+            f'Created StockItem {stock_item.pk} for Part {part_id} (qty={quantity}, user={getattr(user, "username", "anon")})'
+        )
+        return {
+            "success": True,
+            "stock_id": stock_item.pk,
+            "message": f"Stock item created (ID {stock_item.pk})",
+        }
 
     except Exception as e:
-        logger.error(f'Failed to create StockItem for Part {part_id}: {e}', exc_info=True)
-        return {'success': False, 'stock_id': None, 'message': str(e)}
+        logger.error(
+            f"Failed to create StockItem for Part {part_id}: {e}", exc_info=True
+        )
+        return {"success": False, "stock_id": None, "message": str(e)}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Label template discovery
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def get_label_templates() -> list:
     """
@@ -116,51 +136,61 @@ def get_label_templates() -> list:
     # ── Path 1: report.models.LabelTemplate (current) ────────────
     try:
         from report.models import LabelTemplate
+
         # Filter to StockItem labels only
-        qs = LabelTemplate.objects.filter(enabled=True, model_type='stockitem').order_by('name')
-        results = [{'id': t.pk, 'name': t.name} for t in qs]
+        qs = LabelTemplate.objects.filter(
+            enabled=True, model_type="stockitem"
+        ).order_by("name")
+        results = [{"id": t.pk, "name": t.name} for t in qs]
         if results:
             return results
         # If nothing for stockitem, fall back to ALL label templates
-        qs_all = LabelTemplate.objects.filter(enabled=True).order_by('name')
-        results = [{'id': t.pk, 'name': f"{t.name} [{t.model_type}]"} for t in qs_all]
+        qs_all = LabelTemplate.objects.filter(enabled=True).order_by("name")
+        results = [{"id": t.pk, "name": f"{t.name} [{t.model_type}]"} for t in qs_all]
         if results:
-            logger.info('get_label_templates: no stockitem-specific templates found, returning all')
+            logger.info(
+                "get_label_templates: no stockitem-specific templates found, returning all"
+            )
             return results
     except ImportError:
-        logger.debug('report.models.LabelTemplate not available')
+        logger.debug("report.models.LabelTemplate not available")
     except Exception as e:
-        logger.warning(f'report.models.LabelTemplate query failed: {e}', exc_info=True)
+        logger.warning(f"report.models.LabelTemplate query failed: {e}", exc_info=True)
 
     # ── Path 2: label.models.LabelTemplate (InvenTree 0.13-0.14) ─
     try:
         from label.models import LabelTemplate  # type: ignore[import]
-        qs = LabelTemplate.objects.filter(enabled=True).order_by('name')
-        results = [{'id': t.pk, 'name': t.name} for t in qs]
+
+        qs = LabelTemplate.objects.filter(enabled=True).order_by("name")
+        results = [{"id": t.pk, "name": t.name} for t in qs]
         if results:
             return results
     except ImportError:
         pass
     except Exception as e:
-        logger.debug(f'label.models.LabelTemplate query failed: {e}')
+        logger.debug(f"label.models.LabelTemplate query failed: {e}")
 
     # ── Path 3: StockItemLabel (InvenTree < 0.13 legacy) ─────────
     try:
         from label.models import StockItemLabel  # type: ignore[import]
-        qs = StockItemLabel.objects.filter(enabled=True).order_by('name')
-        return [{'id': t.pk, 'name': t.name} for t in qs]
+
+        qs = StockItemLabel.objects.filter(enabled=True).order_by("name")
+        return [{"id": t.pk, "name": t.name} for t in qs]
     except ImportError:
         pass
     except Exception as e:
-        logger.debug(f'label.models.StockItemLabel query failed: {e}')
+        logger.debug(f"label.models.StockItemLabel query failed: {e}")
 
-    logger.warning('get_label_templates: no label template model found in this InvenTree version')
+    logger.warning(
+        "get_label_templates: no label template model found in this InvenTree version"
+    )
     return []
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Stock location tree
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def get_stock_locations() -> list:
     """
@@ -175,27 +205,29 @@ def get_stock_locations() -> list:
         result = []
         # order_by('tree_id', 'lft') gives correct MPTT pre-order traversal
         try:
-            qs = StockLocation.objects.all().order_by('tree_id', 'lft')
+            qs = StockLocation.objects.all().order_by("tree_id", "lft")
         except Exception:
-            qs = StockLocation.objects.all().order_by('name')
+            qs = StockLocation.objects.all().order_by("name")
 
         for loc in qs:
             # Calculate depth: count ancestors by checking level attribute (MPTT)
-            depth = getattr(loc, 'level', 0)
-            indent = '\u00a0\u00a0' * depth + ('\u2514\u2500 ' if depth else '')
-            path = loc.pathstring if hasattr(loc, 'pathstring') else loc.name
-            description = getattr(loc, 'description', '') or ''
-            result.append({
-                'id': loc.pk,
-                'name': indent + loc.name,
-                'path': path,
-                'description': description,
-            })
+            depth = getattr(loc, "level", 0)
+            indent = "\u00a0\u00a0" * depth + ("\u2514\u2500 " if depth else "")
+            path = loc.pathstring if hasattr(loc, "pathstring") else loc.name
+            description = getattr(loc, "description", "") or ""
+            result.append(
+                {
+                    "id": loc.pk,
+                    "name": indent + loc.name,
+                    "path": path,
+                    "description": description,
+                }
+            )
 
         return result
 
     except Exception as e:
-        logger.error(f'get_stock_locations failed: {e}', exc_info=True)
+        logger.error(f"get_stock_locations failed: {e}", exc_info=True)
         return []
 
 
@@ -203,10 +235,11 @@ def get_stock_locations() -> list:
 #  Label printing
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def print_stock_label(
     stock_item_id: int,
     template_id: int,
-    plugin_slug: str = '',
+    plugin_slug: str = "",
     request=None,
 ) -> dict:
     """
@@ -234,9 +267,13 @@ def print_stock_label(
     # ── Resolve the StockItem ─────────────────────────────────────────────
     try:
         from stock.models import StockItem
+
         stock_item = StockItem.objects.get(pk=stock_item_id)
     except Exception as e:
-        return {'success': False, 'message': f'StockItem {stock_item_id} not found: {e}'}
+        return {
+            "success": False,
+            "message": f"StockItem {stock_item_id} not found: {e}",
+        }
 
     # ── Resolve the print plugin ──────────────────────────────────────────
     resolved_key = _resolve_print_plugin_key(plugin_slug)
@@ -244,10 +281,12 @@ def print_stock_label(
     # ── Strategy 1: Direct template.print() ───────────────────────────────
     try:
         from report.models import LabelTemplate
+
         template = LabelTemplate.objects.get(pk=template_id)
 
         from plugin.registry import registry as plugin_registry
-        printing_plugins = plugin_registry.with_mixin('labels', active=True)
+
+        printing_plugins = plugin_registry.with_mixin("labels", active=True)
         output_plugin = None
 
         if resolved_key:
@@ -260,11 +299,11 @@ def print_stock_label(
 
         if not output_plugin:
             return {
-                'success': False,
-                'message': (
-                    'No active label printing plugin found. '
-                    'Enable a printing plugin (e.g. InvenTree Label Machine '
-                    'for Dymo/Zebra printers) in InvenTree.'
+                "success": False,
+                "message": (
+                    "No active label printing plugin found. "
+                    "Enable a printing plugin (e.g. InvenTree Label Machine "
+                    "for Dymo/Zebra printers) in InvenTree."
                 ),
             }
 
@@ -280,17 +319,22 @@ def print_stock_label(
             request=request,
         )
         logger.info(
-            f'Label printed (direct): StockItem {stock_item_id} via template '
+            f"Label printed (direct): StockItem {stock_item_id} via template "
             f'"{template.name}" using plugin "{output_plugin.slug}"'
-            + (f' machine={options.get("machine")}' if options.get('machine') else '')
+            + (f' machine={options.get("machine")}' if options.get("machine") else "")
         )
-        return {'success': True, 'message': f'Label sent to "{output_plugin.name}" successfully'}
+        return {
+            "success": True,
+            "message": f'Label sent to "{output_plugin.name}" successfully',
+        }
 
     except ImportError:
-        logger.debug('report.models.LabelTemplate not available, trying legacy fallback')
+        logger.debug(
+            "report.models.LabelTemplate not available, trying legacy fallback"
+        )
     except Exception as e:
-        logger.error(f'Label print failed (direct): {e}', exc_info=True)
-        return {'success': False, 'message': f'Label print error: {e}'}
+        logger.error(f"Label print failed (direct): {e}", exc_info=True)
+        return {"success": False, "message": f"Label print error: {e}"}
 
     # ── Strategy 2: Legacy fallback (InvenTree < 0.13) ────────────────────
     try:
@@ -301,19 +345,20 @@ def print_stock_label(
 
         from django.test import RequestFactory
         from django.contrib.auth.models import AnonymousUser
+
         factory = RequestFactory()
-        fake_req = factory.get('/', {'items': str(stock_item_id)})
+        fake_req = factory.get("/", {"items": str(stock_item_id)})
         fake_req.user = AnonymousUser()
 
         view = StockItemLabelPrint()
         view.request = fake_req
         view.print_labels(template, [stock_item])
-        logger.info(f'Label printed (legacy API): StockItem {stock_item_id}')
-        return {'success': True, 'message': 'Label sent to printer (legacy API)'}
+        logger.info(f"Label printed (legacy API): StockItem {stock_item_id}")
+        return {"success": True, "message": "Label sent to printer (legacy API)"}
 
     except Exception as e:
-        logger.error(f'Label print failed (legacy API): {e}', exc_info=True)
-        return {'success': False, 'message': f'Label print error (legacy): {e}'}
+        logger.error(f"Label print failed (legacy API): {e}", exc_info=True)
+        return {"success": False, "message": f"Label print error (legacy): {e}"}
 
 
 def _build_printing_options(plugin) -> dict:
@@ -326,27 +371,32 @@ def _build_printing_options(plugin) -> dict:
 
     For all other plugins (e.g. inventreelabel / PDF) no extra options are needed.
     """
-    slug = getattr(plugin, 'slug', '') or ''
+    slug = getattr(plugin, "slug", "") or ""
 
     # Only machine-based plugins need a machine UUID
-    if 'machine' not in slug.lower():
+    if "machine" not in slug.lower():
         return {}
 
     try:
         from machine.models import MachineConfig
-        machines = MachineConfig.objects.filter(active=True, machine_type='label-printer')
+
+        machines = MachineConfig.objects.filter(
+            active=True, machine_type="label-printer"
+        )
         machine = machines.first()
         if machine:
             machine_pk = str(machine.pk)
             logger.info(
-                f'_build_printing_options: auto-selected machine '
-                f'pk={machine_pk} name={machine.name}'
+                f"_build_printing_options: auto-selected machine "
+                f"pk={machine_pk} name={machine.name}"
             )
-            return {'machine': machine_pk}
+            return {"machine": machine_pk}
         else:
-            logger.warning('_build_printing_options: no active label-printer machine found in DB')
+            logger.warning(
+                "_build_printing_options: no active label-printer machine found in DB"
+            )
     except Exception as e:
-        logger.warning(f'_build_printing_options: could not resolve machine: {e}')
+        logger.warning(f"_build_printing_options: could not resolve machine: {e}")
 
     return {}
 
@@ -359,13 +409,14 @@ def _resolve_print_plugin_key(plugin_slug: str) -> str:
     forwards print jobs to machine drivers.
     """
     if not plugin_slug:
-        return ''
+        return ""
 
     slug = plugin_slug.strip().lower()
 
     # Direct match to known label-printing plugin keys
     from plugin.registry import registry as plugin_registry
-    label_plugins = plugin_registry.with_mixin('labels', active=True)
+
+    label_plugins = plugin_registry.with_mixin("labels", active=True)
     label_keys = {p.slug for p in label_plugins}
 
     if slug in label_keys:
@@ -375,14 +426,14 @@ def _resolve_print_plugin_key(plugin_slug: str) -> str:
     # These need routing through 'inventreelabelmachine'
     all_plugins = plugin_registry.plugins
     for key, p in all_plugins.items():
-        p_slug = getattr(p, 'slug', '')
+        p_slug = getattr(p, "slug", "")
         if p_slug == slug or key == slug:
             mro_names = [c.__name__ for c in type(p).__mro__]
-            if 'MachineDriverMixin' in mro_names:
+            if "MachineDriverMixin" in mro_names:
                 logger.info(
                     f'Plugin "{slug}" is a machine driver — routing via inventreelabelmachine'
                 )
-                return 'inventreelabelmachine'
+                return "inventreelabelmachine"
 
     # Partial match: try matching by substring
     for key in label_keys:

@@ -11,15 +11,17 @@ setuptools.setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/0neShot/SmartParts",
-    packages=setuptools.find_packages(include=['inventree_smart_parts', 'inventree_smart_parts.*']),
+    packages=setuptools.find_packages(
+        include=["inventree_smart_parts", "inventree_smart_parts.*"]
+    ),
     include_package_data=True,
     install_requires=[
-        'requests>=2.25.0',
-        'openpyxl>=3.0.0',
+        "requests>=2.25.0",
+        "openpyxl>=3.0.0",
     ],
     entry_points={
-        'inventree_plugins': [
-            'SmartPartsPlugin = inventree_smart_parts.core:SmartPartsPlugin'
+        "inventree_plugins": [
+            "SmartPartsPlugin = inventree_smart_parts.core:SmartPartsPlugin"
         ]
     },
     classifiers=[
@@ -27,5 +29,5 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.9',
+    python_requires=">=3.9",
 )

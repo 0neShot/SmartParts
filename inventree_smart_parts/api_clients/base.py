@@ -15,27 +15,30 @@ import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-logger = logging.getLogger('inventree_smart_parts.api')
+logger = logging.getLogger("inventree_smart_parts.api")
 
 
 # ═══════════════════════════════════════════════════════════════════
 #  Shared Data Structures
 # ═══════════════════════════════════════════════════════════════════
 
+
 @dataclass
 class PriceBreak:
     """Represents a single price break from a supplier."""
+
     quantity: int
     price: float
-    currency: str = 'EUR'
+    currency: str = "EUR"
 
 
 @dataclass
 class PartParameter:
     """Represents a single part parameter (e.g., 'Voltage Rating': '5V')."""
+
     name: str
     value: str
-    unit: str = ''
+    unit: str = ""
 
 
 @dataclass
@@ -46,25 +49,26 @@ class PartData:
     This is the universal exchange format between API clients,
     the data merger, and the part creator.
     """
+
     # ── Identification ──
-    mpn: str = ''
-    manufacturer: str = ''
-    description: str = ''
-    name: str = ''
+    mpn: str = ""
+    manufacturer: str = ""
+    description: str = ""
+    name: str = ""
 
     # ── Classification ──
-    category: str = ''          # Distributor's category string
-    subcategory: str = ''       # Distributor's subcategory string
+    category: str = ""  # Distributor's category string
+    subcategory: str = ""  # Distributor's subcategory string
 
     # ── Supplier Info ──
-    supplier_name: str = ''     # e.g., 'Mouser', 'DigiKey'
-    supplier_sku: str = ''      # Supplier's part number / SKU
-    supplier_url: str = ''      # Direct link to supplier page
+    supplier_name: str = ""  # e.g., 'Mouser', 'DigiKey'
+    supplier_sku: str = ""  # Supplier's part number / SKU
+    supplier_url: str = ""  # Direct link to supplier page
 
     # ── Technical Data ──
-    datasheet_url: str = ''
-    image_url: str = ''
-    package: str = ''           # e.g., 'SOIC-8', 'TO-220'
+    datasheet_url: str = ""
+    image_url: str = ""
+    package: str = ""  # e.g., 'SOIC-8', 'TO-220'
     parameters: List[PartParameter] = field(default_factory=list)
 
     # ── Pricing & Stock ──
@@ -74,9 +78,9 @@ class PartData:
     order_multiple: int = 1
 
     # ── Source Metadata ──
-    source: str = ''            # API source identifier ('mouser', 'digikey', 'lcsc')
+    source: str = ""  # API source identifier ('mouser', 'digikey', 'lcsc')
     raw_data: Dict[str, Any] = field(default_factory=dict)
-    confidence: float = 1.0     # Match confidence (0.0 – 1.0)
+    confidence: float = 1.0  # Match confidence (0.0 – 1.0)
 
     def has_field(self, field_name: str) -> bool:
         """Check whether a field has a non-empty, non-default value."""
@@ -94,6 +98,7 @@ class PartData:
 #  Abstract Base Client
 # ═══════════════════════════════════════════════════════════════════
 
+
 class BaseApiClient(ABC):
     """
     Abstract base class for distributor API clients.
@@ -106,8 +111,8 @@ class BaseApiClient(ABC):
     """
 
     # Subclasses must set these
-    SOURCE_NAME: str = ''
-    BASE_URL: str = ''
+    SOURCE_NAME: str = ""
+    BASE_URL: str = ""
 
     def __init__(self, timeout: int = 15, max_retries: int = 3):
         self.timeout = timeout
@@ -173,9 +178,7 @@ class BaseApiClient(ABC):
                     f"(status={response.status_code}, "
                     f"content-type={response.headers.get('content-type', '?')})"
                 )
-                raise ApiError(
-                    f"{self.SOURCE_NAME} API returned non-JSON response"
-                )
+                raise ApiError(f"{self.SOURCE_NAME} API returned non-JSON response")
 
             if not isinstance(data, dict):
                 logger.error(
@@ -193,7 +196,7 @@ class BaseApiClient(ABC):
             raise ApiTimeoutError(f"{self.SOURCE_NAME} API request timed out")
 
         except requests.exceptions.HTTPError as e:
-            status = e.response.status_code if e.response is not None else 'unknown'
+            status = e.response.status_code if e.response is not None else "unknown"
             logger.error(f"[{self.SOURCE_NAME}] HTTP {status} error: {e}")
             raise ApiHttpError(
                 f"{self.SOURCE_NAME} API returned HTTP {status}",
@@ -203,9 +206,7 @@ class BaseApiClient(ABC):
 
         except requests.exceptions.ConnectionError:
             logger.error(f"[{self.SOURCE_NAME}] Connection failed for URL: {url}")
-            raise ApiConnectionError(
-                f"Could not connect to {self.SOURCE_NAME} API"
-            )
+            raise ApiConnectionError(f"Could not connect to {self.SOURCE_NAME} API")
 
         except requests.exceptions.RequestException as e:
             logger.error(f"[{self.SOURCE_NAME}] Request error: {e}")
@@ -237,18 +238,22 @@ class BaseApiClient(ABC):
 #  Custom Exceptions
 # ═══════════════════════════════════════════════════════════════════
 
+
 class ApiError(Exception):
     """Base exception for API client errors."""
+
     pass
 
 
 class ApiTimeoutError(ApiError):
     """API request timed out."""
+
     pass
 
 
 class ApiConnectionError(ApiError):
     """Could not connect to the API."""
+
     pass
 
 
@@ -263,4 +268,5 @@ class ApiHttpError(ApiError):
 
 class ApiAuthError(ApiError):
     """API authentication failed."""
+
     pass

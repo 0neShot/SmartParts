@@ -17,14 +17,14 @@ import threading
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 
-logger = logging.getLogger('inventree_smart_parts.logger')
+logger = logging.getLogger("inventree_smart_parts.logger")
 
 # ── Configuration ────────────────────────────────────────────────────
 MAX_ENTRIES = 500
 
 # Log file location: alongside this file (data/plugins/…/services/)
 # Falls back to /tmp if the directory is not writable.
-_LOG_FILE = os.path.join(os.path.dirname(__file__), '..', 'smart_parts_activity.jsonl')
+_LOG_FILE = os.path.join(os.path.dirname(__file__), "..", "smart_parts_activity.jsonl")
 _LOG_FILE = os.path.normpath(_LOG_FILE)
 
 _lock = threading.Lock()
@@ -35,13 +35,14 @@ _in_memory_fallback: List[Dict[str, Any]] = []
 #  Internal helpers
 # ═══════════════════════════════════════════════════════════════════
 
+
 def _read_all() -> List[Dict[str, Any]]:
     """Read all log entries from the JSONL file."""
     entries = []
     try:
         if not os.path.exists(_LOG_FILE):
             return entries
-        with open(_LOG_FILE, 'r', encoding='utf-8') as f:
+        with open(_LOG_FILE, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line:
@@ -59,9 +60,9 @@ def _write_all(entries: List[Dict[str, Any]]) -> bool:
     try:
         # Ensure directory exists
         os.makedirs(os.path.dirname(_LOG_FILE), exist_ok=True)
-        with open(_LOG_FILE, 'w', encoding='utf-8') as f:
+        with open(_LOG_FILE, "w", encoding="utf-8") as f:
             for entry in entries:
-                f.write(json.dumps(entry, ensure_ascii=False) + '\n')
+                f.write(json.dumps(entry, ensure_ascii=False) + "\n")
         return True
     except OSError as e:
         logger.warning(f"[SmartParts] Could not write log file {_LOG_FILE}: {e}")
@@ -72,7 +73,8 @@ def _write_all(entries: List[Dict[str, Any]]) -> bool:
 #  Public API
 # ═══════════════════════════════════════════════════════════════════
 
-def log_activity(level: str, message: str, details: str = '') -> None:
+
+def log_activity(level: str, message: str, details: str = "") -> None:
     """
     Append a new activity log entry.
 
@@ -82,10 +84,10 @@ def log_activity(level: str, message: str, details: str = '') -> None:
         details: Optional extra context (e.g. error message)
     """
     entry = {
-        'timestamp': datetime.now().isoformat(timespec='seconds'),
-        'level': level.upper(),
-        'message': str(message),
-        'details': str(details),
+        "timestamp": datetime.now().isoformat(timespec="seconds"),
+        "level": level.upper(),
+        "message": str(message),
+        "details": str(details),
     }
 
     with _lock:
@@ -121,17 +123,19 @@ def get_logs(
         entries = _read_all()
         # Merge in-memory fallback entries (deduplicate by content+timestamp)
         if _in_memory_fallback:
-            existing_ts = {e['timestamp'] for e in entries}
+            existing_ts = {e["timestamp"] for e in entries}
             for e in _in_memory_fallback:
-                if e['timestamp'] not in existing_ts:
+                if e["timestamp"] not in existing_ts:
                     entries.append(e)
 
     # Sort newest first
-    entries_sorted = sorted(entries, key=lambda e: e.get('timestamp', ''), reverse=True)
+    entries_sorted = sorted(entries, key=lambda e: e.get("timestamp", ""), reverse=True)
 
     # Apply level filter
     if level_filter:
-        entries_sorted = [e for e in entries_sorted if e.get('level') == level_filter.upper()]
+        entries_sorted = [
+            e for e in entries_sorted if e.get("level") == level_filter.upper()
+        ]
 
     return entries_sorted[:limit]
 

@@ -9,22 +9,23 @@ import logging
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass
 
-logger = logging.getLogger('inventree_smart_parts.services.duplicates')
+logger = logging.getLogger("inventree_smart_parts.services.duplicates")
 
 
 @dataclass
 class DuplicateResult:
     """Result of a duplicate check."""
+
     is_duplicate: bool = False
     existing_part_id: Optional[int] = None
-    existing_part_name: str = ''
-    existing_mpn: str = ''
-    existing_manufacturer: str = ''
-    match_type: str = ''  # 'exact_mpn', 'fuzzy_mpn', 'name_match'
+    existing_part_name: str = ""
+    existing_mpn: str = ""
+    existing_manufacturer: str = ""
+    match_type: str = ""  # 'exact_mpn', 'fuzzy_mpn', 'name_match'
     confidence: float = 0.0
 
 
-def check_duplicate(mpn: str, manufacturer: str = '') -> DuplicateResult:
+def check_duplicate(mpn: str, manufacturer: str = "") -> DuplicateResult:
     """
     Check if a part with the given MPN already exists in InvenTree.
 
@@ -65,8 +66,10 @@ def check_duplicate(mpn: str, manufacturer: str = '') -> DuplicateResult:
                 existing_part_id=match.part.pk,
                 existing_part_name=match.part.name,
                 existing_mpn=match.MPN,
-                existing_manufacturer=str(match.manufacturer) if match.manufacturer else '',
-                match_type='exact_mpn',
+                existing_manufacturer=(
+                    str(match.manufacturer) if match.manufacturer else ""
+                ),
+                match_type="exact_mpn",
                 confidence=1.0,
             )
 
@@ -79,8 +82,10 @@ def check_duplicate(mpn: str, manufacturer: str = '') -> DuplicateResult:
                 existing_part_id=match.part.pk,
                 existing_part_name=match.part.name,
                 existing_mpn=match.MPN,
-                existing_manufacturer=str(match.manufacturer) if match.manufacturer else '',
-                match_type='exact_mpn',
+                existing_manufacturer=(
+                    str(match.manufacturer) if match.manufacturer else ""
+                ),
+                match_type="exact_mpn",
                 confidence=0.95,
             )
 
@@ -95,8 +100,10 @@ def check_duplicate(mpn: str, manufacturer: str = '') -> DuplicateResult:
                     existing_part_id=match.part.pk,
                     existing_part_name=match.part.name,
                     existing_mpn=match.MPN,
-                    existing_manufacturer=str(match.manufacturer) if match.manufacturer else '',
-                    match_type='fuzzy_mpn',
+                    existing_manufacturer=(
+                        str(match.manufacturer) if match.manufacturer else ""
+                    ),
+                    match_type="fuzzy_mpn",
                     confidence=0.7,
                 )
 
@@ -125,12 +132,21 @@ def check_duplicates_batch(mpn_list: List[str]) -> Dict[str, DuplicateResult]:
 def _strip_suffixes(mpn: str) -> str:
     """Strip common ordering suffixes from MPNs."""
     suffixes = [
-        '-ND', '-TR', '-CT', '-1', '-2', '-3',
-        '/NOPB', '-REEL', '-TUBE', '-BULK',
-        '#PBF', '-PBF',
+        "-ND",
+        "-TR",
+        "-CT",
+        "-1",
+        "-2",
+        "-3",
+        "/NOPB",
+        "-REEL",
+        "-TUBE",
+        "-BULK",
+        "#PBF",
+        "-PBF",
     ]
     result = mpn.upper()
     for suffix in suffixes:
         if result.endswith(suffix):
-            result = result[:-len(suffix)]
+            result = result[: -len(suffix)]
     return result

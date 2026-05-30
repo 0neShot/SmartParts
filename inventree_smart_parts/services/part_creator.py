@@ -13,15 +13,31 @@ from dataclasses import dataclass, field
 
 from ..api_clients.base import PartData
 
-logger = logging.getLogger('inventree_smart_parts.services.creator')
+logger = logging.getLogger("inventree_smart_parts.services.creator")
 
 # ── Shared sentinel values: empty/placeholder parameter values ────────────────
 # Used by both _create_parameters (DB writes) and the parameter_normalizer
 # (display filtering) to guarantee consistent sanitisation.
-EMPTY_SENTINELS: frozenset = frozenset({
-    '', '-', '--', '---', 'n/a', 'na', 'null', 'none', 'unknown',
-    'not specified', 'not applicable', 'tbd', 'tba', '?', '\u2013', '\u2014',
-})
+EMPTY_SENTINELS: frozenset = frozenset(
+    {
+        "",
+        "-",
+        "--",
+        "---",
+        "n/a",
+        "na",
+        "null",
+        "none",
+        "unknown",
+        "not specified",
+        "not applicable",
+        "tbd",
+        "tba",
+        "?",
+        "\u2013",
+        "\u2014",
+    }
+)
 
 
 def is_useless_value(value) -> bool:
@@ -31,14 +47,16 @@ def is_useless_value(value) -> bool:
     stripped = str(value).strip()
     return not stripped or stripped.lower() in EMPTY_SENTINELS
 
+
 @dataclass
 class CreationResult:
     """Result of a part creation operation."""
+
     success: bool = False
     part_id: Optional[int] = None
-    part_name: str = ''
-    action: str = ''  # 'created', 'updated', 'skipped'
-    message: str = ''
+    part_name: str = ""
+    action: str = ""  # 'created', 'updated', 'skipped'
+    message: str = ""
     # Separate 'new' from 'already existed' for accurate reporting
     manufacturer_parts_created: List[int] = field(default_factory=list)
     manufacturer_parts_existing: List[int] = field(default_factory=list)
@@ -86,22 +104,20 @@ def create_part_from_data(
     try:
         from part.models import Part, PartCategory
         from company.models import (
-            Company, ManufacturerPart, SupplierPart,
+            Company,
+            ManufacturerPart,
+            SupplierPart,
         )
         from django.db import transaction
 
         with transaction.atomic():
             # ── Step 1: Get or create the Part ──
             if existing_part_id and update_existing:
-                part = _update_existing_part(
-                    existing_part_id, part_data, category_id
-                )
-                result.action = 'updated'
+                part = _update_existing_part(existing_part_id, part_data, category_id)
+                result.action = "updated"
             else:
-                part = _create_new_part(
-                    part_data, category_id
-                )
-                result.action = 'created'
+                part = _create_new_part(part_data, category_id)
+                result.action = "created"
 
             result.part_id = part.pk
             result.part_name = part.name
@@ -155,13 +171,15 @@ def create_part_from_data(
             # ── Step 5: Media Import (Image & Datasheet) ──
             from .image_handler import auto_import_media, attach_datasheet_to_part
 
-            if part_data.image_url or part_data.raw_data.get('source_image_urls'):
+            if part_data.image_url or part_data.raw_data.get("source_image_urls"):
                 img_result = auto_import_media(part, part_data)
                 if img_result.success:
                     logger.info(f"Image: {img_result.message}")
                 else:
                     # Non-critical – log but don't surface to user as error
-                    logger.info(f"Image not imported (non-critical): {img_result.message}")
+                    logger.info(
+                        f"Image not imported (non-critical): {img_result.message}"
+                    )
 
             if part_data.datasheet_url:
                 attach_datasheet_to_part(part, part_data.datasheet_url)
@@ -175,15 +193,19 @@ def create_part_from_data(
             se = len(result.supplier_parts_existing)
             if mc or me:
                 bits = []
-                if mc: bits.append(f'{mc} created')
-                if me: bits.append(f'{me} already existed')
+                if mc:
+                    bits.append(f"{mc} created")
+                if me:
+                    bits.append(f"{me} already existed")
                 parts.append(f"manufacturer part ({', '.join(bits)})")
             if sc or se:
                 bits = []
-                if sc: bits.append(f'{sc} created')
-                if se: bits.append(f'{se} already existed')
+                if sc:
+                    bits.append(f"{sc} created")
+                if se:
+                    bits.append(f"{se} already existed")
                 parts.append(f"supplier part ({', '.join(bits)})")
-            suffix = (': ' + '; '.join(parts)) if parts else ' (no linked parts)'
+            suffix = (": " + "; ".join(parts)) if parts else " (no linked parts)"
             result.message = f"'{part.name}' {result.action} successfully{suffix}."
 
     except Exception as e:
@@ -195,9 +217,7 @@ def create_part_from_data(
     return result
 
 
-def _create_new_part(
-    data: PartData, category_id: Optional[int]
-) -> 'Part':
+def _create_new_part(data: PartData, category_id: Optional[int]) -> "Part":
     """Create a new InvenTree Part."""
     from part.models import Part, PartCategory
 
@@ -211,21 +231,25 @@ def _create_new_part(
     name = data.mpn
     if not name:
         name = "Unknown"
-        
+
     # Truncate name if too long
     if len(name) > 100:
-        name = name[:97] + '...'
+        name = name[:97] + "..."
 
     part = Part.objects.create(
         name=name,
-        description=data.description[:250] if data.description else f'{data.manufacturer} {data.mpn}',
+        description=(
+            data.description[:250]
+            if data.description
+            else f"{data.manufacturer} {data.mpn}"
+        ),
         category=category,
-        IPN='',  # Let InvenTree auto-generate if configured
+        IPN="",  # Let InvenTree auto-generate if configured
         active=True,
         virtual=False,
         component=True,
         purchaseable=True,
-        link=data.datasheet_url or '',
+        link=data.datasheet_url or "",
     )
 
     logger.info(f"Created Part: {part.name} (ID: {part.pk})")
@@ -234,7 +258,7 @@ def _create_new_part(
 
 def _update_existing_part(
     part_id: int, data: PartData, category_id: Optional[int]
-) -> 'Part':
+) -> "Part":
     """Update an existing InvenTree Part with new data.
 
     This is deliberately non-destructive: existing values are NEVER
@@ -271,7 +295,7 @@ def _update_existing_part(
 
 def _create_manufacturer_part(
     part, data: PartData, auto_create: bool
-) -> Tuple[Optional['ManufacturerPart'], bool]:
+) -> Tuple[Optional["ManufacturerPart"], bool]:
     """Create a ManufacturerPart linking Part to Manufacturer.
 
     Uses get_or_create keyed on (part, manufacturer, MPN) so that:
@@ -297,7 +321,7 @@ def _create_manufacturer_part(
         manufacturer=manufacturer,
         MPN=data.mpn,
         defaults={
-            'link': data.supplier_url or '',
+            "link": data.supplier_url or "",
         },
     )
 
@@ -324,8 +348,9 @@ def _get_supplier_entries(data: PartData, part=None) -> List[Dict]:
        excluded so re-runs / updates don't create duplicates.
     """
     from company.models import SupplierPart
+
     entries = []
-    seen_keys: set = set()   # lower-case "name:sku" keys
+    seen_keys: set = set()  # lower-case "name:sku" keys
 
     def _mem_key(name: str, sku: str) -> str:
         return f"{name.strip().lower()}:{sku.strip().lower()}"
@@ -340,16 +365,16 @@ def _get_supplier_entries(data: PartData, part=None) -> List[Dict]:
         ).exists()
 
     # ── Primary path: iterate raw_data['supplier_data'] (all API sources) ──
-    supplier_data_list = data.raw_data.get('supplier_data', [])
+    supplier_data_list = data.raw_data.get("supplier_data", [])
     logger.debug(
         f"_get_supplier_entries: {len(supplier_data_list)} source(s) in raw_data "
         f"for MPN '{data.mpn}'"
     )
 
     for sd in supplier_data_list:
-        name = (sd.get('supplier_name') or '').strip()
-        sku  = (sd.get('supplier_sku')  or '').strip()
-        src  =  sd.get('source', '?')
+        name = (sd.get("supplier_name") or "").strip()
+        sku = (sd.get("supplier_sku") or "").strip()
+        src = sd.get("source", "?")
 
         if not name or not sku:
             logger.debug(f"  [{src}] Skipped – missing supplier_name or supplier_sku")
@@ -357,7 +382,9 @@ def _get_supplier_entries(data: PartData, part=None) -> List[Dict]:
 
         key = _mem_key(name, sku)
         if key in seen_keys:
-            logger.debug(f"  [{src}] Skipped – duplicate in current batch ({name}:{sku})")
+            logger.debug(
+                f"  [{src}] Skipped – duplicate in current batch ({name}:{sku})"
+            )
             continue
 
         if _already_in_db(name, sku):
@@ -366,20 +393,23 @@ def _get_supplier_entries(data: PartData, part=None) -> List[Dict]:
             continue
 
         from ..api_clients.base import PriceBreak
+
         pbs = [
             PriceBreak(
-                quantity=pb['qty'],
-                price=pb['price'],
-                currency=pb.get('currency', 'EUR'),
+                quantity=pb["qty"],
+                price=pb["price"],
+                currency=pb.get("currency", "EUR"),
             )
-            for pb in sd.get('price_breaks', [])
+            for pb in sd.get("price_breaks", [])
         ]
-        entries.append({
-            'name': name,
-            'sku':  sku,
-            'url':  sd.get('supplier_url', ''),
-            'price_breaks': pbs,
-        })
+        entries.append(
+            {
+                "name": name,
+                "sku": sku,
+                "url": sd.get("supplier_url", ""),
+                "price_breaks": pbs,
+            }
+        )
         seen_keys.add(key)
         logger.debug(f"  [{src}] Queued SupplierPart: {name} / {sku}")
 
@@ -389,12 +419,14 @@ def _get_supplier_entries(data: PartData, part=None) -> List[Dict]:
         name, sku = data.supplier_name.strip(), data.supplier_sku.strip()
         key = _mem_key(name, sku)
         if key not in seen_keys and not _already_in_db(name, sku):
-            entries.append({
-                'name': name,
-                'sku':  sku,
-                'url':  data.supplier_url,
-                'price_breaks': data.price_breaks,
-            })
+            entries.append(
+                {
+                    "name": name,
+                    "sku": sku,
+                    "url": data.supplier_url,
+                    "price_breaks": data.price_breaks,
+                }
+            )
             logger.debug(f"  [fallback] Queued SupplierPart: {name} / {sku}")
 
     logger.info(
@@ -404,10 +436,9 @@ def _get_supplier_entries(data: PartData, part=None) -> List[Dict]:
     return entries
 
 
-
 def _create_supplier_part(
     part, data: PartData, supplier_entry: Dict, auto_create: bool
-) -> Tuple[Optional['SupplierPart'], bool]:
+) -> Tuple[Optional["SupplierPart"], bool]:
     """Create or update a SupplierPart linking Part to Supplier.
 
     Returns (supplier_part, was_created). was_created=False means the record
@@ -415,9 +446,9 @@ def _create_supplier_part(
     """
     from company.models import Company, SupplierPart, SupplierPriceBreak
 
-    supplier_name = supplier_entry['name']
-    sku = supplier_entry['sku']
-    new_price_breaks = supplier_entry.get('price_breaks', [])
+    supplier_name = supplier_entry["name"]
+    sku = supplier_entry["sku"]
+    new_price_breaks = supplier_entry.get("price_breaks", [])
 
     supplier = _get_or_create_company(
         name=supplier_name,
@@ -440,17 +471,20 @@ def _create_supplier_part(
         # ── Backfill manufacturer_part if missing ──
         if not existing.manufacturer_part:
             from company.models import ManufacturerPart as MP
+
             mfr = MP.objects.filter(part=part, MPN__iexact=data.mpn).first()
             if mfr:
                 existing.manufacturer_part = mfr
-                update_fields.append('manufacturer_part')
-                logger.info(f"Backfilled manufacturer_part on SupplierPart {existing.pk}")
+                update_fields.append("manufacturer_part")
+                logger.info(
+                    f"Backfilled manufacturer_part on SupplierPart {existing.pk}"
+                )
 
         # ── Update URL if changed ──
-        new_url = supplier_entry.get('url', '')
+        new_url = supplier_entry.get("url", "")
         if new_url and existing.link != new_url:
             existing.link = new_url
-            update_fields.append('link')
+            update_fields.append("link")
 
         if update_fields:
             existing.save(update_fields=update_fields)
@@ -470,14 +504,16 @@ def _create_supplier_part(
                     logger.warning(f"Failed to refresh price break for {sku}: {e}")
 
         logger.debug(f"SupplierPart updated (existing): {sku} @ {supplier_name}")
-        return existing, False   # ← not newly created
+        return existing, False  # ← not newly created
 
     # ── Create new SupplierPart via get_or_create ──
     # Reuse existing ManufacturerPart (case-insensitive) — critical when
     # multiple distributors share the same MPN from the same manufacturer.
     from company.models import ManufacturerPart
+
     mfr_part = ManufacturerPart.objects.filter(
-        part=part, MPN__iexact=data.mpn,
+        part=part,
+        MPN__iexact=data.mpn,
     ).first()
 
     try:
@@ -486,8 +522,8 @@ def _create_supplier_part(
             supplier=supplier,
             SKU=sku,
             defaults={
-                'link': supplier_entry.get('url', ''),
-                'manufacturer_part': mfr_part,
+                "link": supplier_entry.get("url", ""),
+                "manufacturer_part": mfr_part,
             },
         )
     except Exception as e:
@@ -504,19 +540,21 @@ def _create_supplier_part(
         # Backfill manufacturer_part if missing (created before MfrPart existed)
         if not sup_part.manufacturer_part and mfr_part:
             sup_part.manufacturer_part = mfr_part
-            update_fields.append('manufacturer_part')
+            update_fields.append("manufacturer_part")
             logger.info(f"Backfilled manufacturer_part on SupplierPart {sup_part.pk}")
 
         # Update URL if changed
-        new_url = supplier_entry.get('url', '')
+        new_url = supplier_entry.get("url", "")
         if new_url and sup_part.link != new_url:
             sup_part.link = new_url
-            update_fields.append('link')
+            update_fields.append("link")
 
         if update_fields:
             sup_part.save(update_fields=update_fields)
 
-        logger.debug(f"SupplierPart already existed: {sku} @ {supplier_name} (ID: {sup_part.pk})")
+        logger.debug(
+            f"SupplierPart already existed: {sku} @ {supplier_name} (ID: {sup_part.pk})"
+        )
 
     for pb in new_price_breaks:
         try:
@@ -524,15 +562,17 @@ def _create_supplier_part(
                 part=sup_part,
                 quantity=pb.quantity,
                 defaults={
-                    'price': pb.price,
-                    'price_currency': pb.currency,
+                    "price": pb.price,
+                    "price_currency": pb.currency,
                 },
             )
         except Exception as e:
             logger.warning(f"Failed to create price break for {sku}: {e}")
 
     if was_created:
-        logger.info(f"Created SupplierPart: {sku} @ {supplier_name} (ID: {sup_part.pk})")
+        logger.info(
+            f"Created SupplierPart: {sku} @ {supplier_name} (ID: {sup_part.pk})"
+        )
 
     return sup_part, was_created
 
@@ -542,7 +582,7 @@ def _get_or_create_company(
     is_manufacturer: bool = False,
     is_supplier: bool = False,
     auto_create: bool = True,
-) -> Optional['Company']:
+) -> Optional["Company"]:
     """Get an existing company or create a new one."""
     from company.models import Company
 
@@ -573,9 +613,10 @@ def _get_or_create_company(
         is_manufacturer=is_manufacturer,
         is_supplier=is_supplier,
     )
-    logger.info(f"Created company: {name} (manufacturer={is_manufacturer}, supplier={is_supplier})")
+    logger.info(
+        f"Created company: {name} (manufacturer={is_manufacturer}, supplier={is_supplier})"
+    )
     return company
-
 
 
 def _create_parameters(part, parameters: List[Any]):
@@ -593,7 +634,7 @@ def _create_parameters(part, parameters: List[Any]):
 
     for param in parameters:
         # Drop parameters without a name or with a useless value
-        if not param.name or is_useless_value(getattr(param, 'value', None)):
+        if not param.name or is_useless_value(getattr(param, "value", None)):
             skipped += 1
             continue
 
@@ -601,7 +642,9 @@ def _create_parameters(part, parameters: List[Any]):
             # Get or create the parameter template
             template, _ = ParameterTemplate.objects.get_or_create(
                 name=param.name,
-                defaults={'units': param.unit if hasattr(param, 'unit') and param.unit else ''}
+                defaults={
+                    "units": param.unit if hasattr(param, "unit") and param.unit else ""
+                },
             )
 
             # Create or update the parameter value for this part
@@ -609,14 +652,17 @@ def _create_parameters(part, parameters: List[Any]):
                 model_type=part_type,
                 model_id=part.pk,
                 template=template,
-                defaults={'data': str(param.value).strip()[:2000]}
+                defaults={"data": str(param.value).strip()[:2000]},
             )
             logger.debug(f"Parameter {param.name}={param.value} for Part {part.pk}")
         except Exception as e:
             logger.warning(f"Failed to create parameter {param.name}: {e}")
 
     if skipped:
-        logger.debug(f"Skipped {skipped} empty/placeholder parameter(s) for Part {part.pk}")
+        logger.debug(
+            f"Skipped {skipped} empty/placeholder parameter(s) for Part {part.pk}"
+        )
+
 
 def _attach_image(part, image_url: str):
     """Download and attach an image to a Part."""
@@ -627,16 +673,16 @@ def _attach_image(part, image_url: str):
         response.raise_for_status()
 
         # Determine file extension
-        content_type = response.headers.get('content-type', '')
-        ext = '.jpg'
-        if 'png' in content_type:
-            ext = '.png'
-        elif 'webp' in content_type:
-            ext = '.webp'
+        content_type = response.headers.get("content-type", "")
+        ext = ".jpg"
+        if "png" in content_type:
+            ext = ".png"
+        elif "webp" in content_type:
+            ext = ".webp"
 
         # Save to temp file then attach
         with tempfile.NamedTemporaryFile(
-            suffix=ext, delete=False, prefix='smartparts_'
+            suffix=ext, delete=False, prefix="smartparts_"
         ) as tmp:
             for chunk in response.iter_content(chunk_size=8192):
                 tmp.write(chunk)
@@ -644,7 +690,8 @@ def _attach_image(part, image_url: str):
 
         try:
             from django.core.files import File
-            with open(tmp_path, 'rb') as f:
+
+            with open(tmp_path, "rb") as f:
                 part.image.save(f"part_{part.pk}{ext}", File(f), save=True)
             logger.info(f"Attached image to Part {part.pk}")
         finally:
@@ -653,23 +700,24 @@ def _attach_image(part, image_url: str):
     except Exception as e:
         logger.warning(f"Failed to download/attach image: {e}")
 
+
 def _attach_datasheet_link(part, datasheet_url: str):
     """Attach the datasheet link to the Part."""
     if not datasheet_url:
         return
-        
+
     try:
         from common.models import Attachment
         from django.contrib.contenttypes.models import ContentType
-        
+
         part_type = ContentType.objects.get_for_model(part)
-        
+
         # InvenTree attachments support either file uploads or external URLs.
         Attachment.objects.get_or_create(
             model_type=part_type,
             model_id=part.pk,
             link=datasheet_url,
-            defaults={'comment': 'Datasheet'}
+            defaults={"comment": "Datasheet"},
         )
         logger.info(f"Attached datasheet link to Part {part.pk}")
     except Exception as e:

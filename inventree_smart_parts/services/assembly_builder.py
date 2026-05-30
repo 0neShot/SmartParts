@@ -13,37 +13,39 @@ import logging
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
-logger = logging.getLogger('inventree_smart_parts.assembly')
+logger = logging.getLogger("inventree_smart_parts.assembly")
 
 
 @dataclass
 class BomItemSpec:
     """Specification for a single BOM line item."""
+
     part_id: int
     quantity: float
-    mpn: str = ''
-    reference: str = ''   # Designator(s) from the CSV
+    mpn: str = ""
+    reference: str = ""  # Designator(s) from the CSV
 
 
 @dataclass
 class AssemblyResult:
     """Result of an assembly + BOM creation operation."""
+
     success: bool = False
     assembly_part_id: Optional[int] = None
-    assembly_part_name: str = ''
-    assembly_url: str = ''
+    assembly_part_name: str = ""
+    assembly_url: str = ""
     bom_items_created: int = 0
     bom_items_skipped: int = 0
     errors: List[str] = field(default_factory=list)
-    message: str = ''
+    message: str = ""
 
 
 def create_assembly_with_bom(
     assembly_name: str,
     bom_specs: List[BomItemSpec],
     category_id: Optional[int] = None,
-    description: str = '',
-    revision: str = '',
+    description: str = "",
+    revision: str = "",
 ) -> AssemblyResult:
     """
     Create an assembly Part and its BomItem children.
@@ -80,20 +82,22 @@ def create_assembly_with_bom(
     # ── Phase 2: Create assembly Part ────────────────────────────────────────
     try:
         assembly_kwargs = {
-            'name':        assembly_name.strip(),
-            'description': description or f"Assembly created by Smart Parts BOM import",
-            'assembly':    True,
-            'component':   False,   # Assembly parts are not usually used as components
-            'active':      True,
-            'purchaseable': False,
+            "name": assembly_name.strip(),
+            "description": description or f"Assembly created by Smart Parts BOM import",
+            "assembly": True,
+            "component": False,  # Assembly parts are not usually used as components
+            "active": True,
+            "purchaseable": False,
         }
         if revision:
-            assembly_kwargs['revision'] = revision.strip()
+            assembly_kwargs["revision"] = revision.strip()
         if category_id:
             try:
-                assembly_kwargs['category'] = PartCategory.objects.get(pk=category_id)
+                assembly_kwargs["category"] = PartCategory.objects.get(pk=category_id)
             except PartCategory.DoesNotExist:
-                logger.warning(f"Category {category_id} not found, creating without category")
+                logger.warning(
+                    f"Category {category_id} not found, creating without category"
+                )
 
         assembly = Part.objects.create(**assembly_kwargs)
         result.assembly_part_id = assembly.pk
@@ -101,9 +105,7 @@ def create_assembly_with_bom(
 
         # Build the InvenTree URL for the new part
         result.assembly_url = f"/web/part/{assembly.pk}"
-        logger.info(
-            f"[Assembly] Created assembly '{assembly_name}' (pk={assembly.pk})"
-        )
+        logger.info(f"[Assembly] Created assembly '{assembly_name}' (pk={assembly.pk})")
 
     except Exception as e:
         logger.error(f"[Assembly] Failed to create assembly Part: {e}", exc_info=True)
@@ -116,12 +118,12 @@ def create_assembly_with_bom(
             sub_part = Part.objects.get(pk=spec.part_id)
 
             bom_kwargs = {
-                'part':     assembly,   # parent assembly Part (InvenTree field name)
-                'sub_part': sub_part,
-                'quantity': max(spec.quantity, 1),
+                "part": assembly,  # parent assembly Part (InvenTree field name)
+                "sub_part": sub_part,
+                "quantity": max(spec.quantity, 1),
             }
             if spec.reference:
-                bom_kwargs['reference'] = spec.reference[:200]  # InvenTree field limit
+                bom_kwargs["reference"] = spec.reference[:200]  # InvenTree field limit
 
             # Avoid duplicate BOM entries for the same sub-part
             existing = BomItem.objects.filter(
@@ -141,9 +143,7 @@ def create_assembly_with_bom(
             else:
                 BomItem.objects.create(**bom_kwargs)
                 result.bom_items_created += 1
-                logger.debug(
-                    f"[Assembly] BomItem: {sub_part.name} × {spec.quantity}"
-                )
+                logger.debug(f"[Assembly] BomItem: {sub_part.name} × {spec.quantity}")
 
         except Part.DoesNotExist:
             msg = f"Sub-part pk={spec.part_id} (MPN: {spec.mpn}) not found"

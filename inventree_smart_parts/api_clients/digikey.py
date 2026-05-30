@@ -9,18 +9,25 @@ import time
 import logging
 from typing import Optional, Dict, Any, List
 
-from .base import BaseApiClient, PartData, PriceBreak, PartParameter, ApiError, ApiAuthError
+from .base import (
+    BaseApiClient,
+    PartData,
+    PriceBreak,
+    PartParameter,
+    ApiError,
+    ApiAuthError,
+)
 
-logger = logging.getLogger('inventree_smart_parts.api.digikey')
+logger = logging.getLogger("inventree_smart_parts.api.digikey")
 
 
 class DigiKeyClient(BaseApiClient):
     """Client for the DigiKey Product Information API v4."""
 
-    SOURCE_NAME = 'digikey'
-    BASE_URL = 'https://api.digikey.com'
-    TOKEN_URL = 'https://api.digikey.com/v1/oauth2/token'
-    SEARCH_URL = 'https://api.digikey.com/products/v4/search/keyword'
+    SOURCE_NAME = "digikey"
+    BASE_URL = "https://api.digikey.com"
+    TOKEN_URL = "https://api.digikey.com/v1/oauth2/token"
+    SEARCH_URL = "https://api.digikey.com/products/v4/search/keyword"
 
     def __init__(self, client_id: str, client_secret: str, **kwargs):
         super().__init__(**kwargs)
@@ -46,19 +53,19 @@ class DigiKeyClient(BaseApiClient):
             response = self.session.post(
                 self.TOKEN_URL,
                 data={
-                    'grant_type': 'client_credentials',
-                    'client_id': self.client_id,
-                    'client_secret': self.client_secret,
+                    "grant_type": "client_credentials",
+                    "client_id": self.client_id,
+                    "client_secret": self.client_secret,
                 },
-                headers={'Content-Type': 'application/x-www-form-urlencoded'},
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
                 timeout=self.timeout,
             )
             response.raise_for_status()
 
             token_data = response.json()
-            self._access_token = token_data['access_token']
+            self._access_token = token_data["access_token"]
             # Expire 60 seconds early to be safe
-            expires_in = token_data.get('expires_in', 3600)
+            expires_in = token_data.get("expires_in", 3600)
             self._token_expiry = time.time() + expires_in - 60
 
             logger.info("[DigiKey] OAuth2 token obtained successfully")
@@ -72,10 +79,10 @@ class DigiKeyClient(BaseApiClient):
         """Return headers with a valid OAuth2 bearer token."""
         self._authenticate()
         return {
-            'Authorization': f'Bearer {self._access_token}',
-            'X-DIGIKEY-Client-Id': self.client_id,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
+            "Authorization": f"Bearer {self._access_token}",
+            "X-DIGIKEY-Client-Id": self.client_id,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
         }
 
     def search_by_mpn(self, mpn: str) -> Optional[PartData]:
@@ -86,16 +93,18 @@ class DigiKeyClient(BaseApiClient):
         headers = self._get_auth_headers()
 
         payload = {
-            'Keywords': mpn,
-            'RecordCount': 10,
-            'RecordStartPosition': 0,
-            'ExcludeMarketPlaceProducts': True,
+            "Keywords": mpn,
+            "RecordCount": 10,
+            "RecordStartPosition": 0,
+            "ExcludeMarketPlaceProducts": True,
         }
 
         logger.info(f"[DigiKey] Searching for MPN: {mpn}")
-        data = self._request('POST', self.SEARCH_URL, headers=headers, json_data=payload)
+        data = self._request(
+            "POST", self.SEARCH_URL, headers=headers, json_data=payload
+        )
 
-        products = data.get('Products', [])
+        products = data.get("Products", [])
         if not products:
             logger.info(f"[DigiKey] No results found for MPN: {mpn}")
             return None
@@ -112,12 +121,12 @@ class DigiKeyClient(BaseApiClient):
         mpn_lower = mpn.lower().strip()
 
         for product in products:
-            mfr_pn = product.get('ManufacturerPartNumber', '').lower().strip()
+            mfr_pn = product.get("ManufacturerPartNumber", "").lower().strip()
             if mfr_pn == mpn_lower:
                 return product
 
         for product in products:
-            mfr_pn = product.get('ManufacturerPartNumber', '').lower().strip()
+            mfr_pn = product.get("ManufacturerPartNumber", "").lower().strip()
             if mpn_lower in mfr_pn:
                 return product
 
@@ -128,56 +137,66 @@ class DigiKeyClient(BaseApiClient):
         # Price breaks — handle both v3 (StandardPricing at root) and
         # v4 (StandardPricing nested inside ProductVariations).
         price_breaks = []
-        pricing_list = raw.get('StandardPricing', [])
+        pricing_list = raw.get("StandardPricing", [])
 
         # Fallback: v4 nests pricing inside ProductVariations
         if not pricing_list:
-            for variation in raw.get('ProductVariations', []):
-                pricing_list = variation.get('StandardPricing', [])
+            for variation in raw.get("ProductVariations", []):
+                pricing_list = variation.get("StandardPricing", [])
                 if pricing_list:
                     break
 
         for pb in pricing_list:
             try:
-                qty = int(pb.get('BreakQuantity', 0))
-                price = float(pb.get('UnitPrice', 0) or pb.get('Price', 0))
-                currency = pb.get('Currency', 'USD')
+                qty = int(pb.get("BreakQuantity", 0))
+                price = float(pb.get("UnitPrice", 0) or pb.get("Price", 0))
+                currency = pb.get("Currency", "USD")
                 if qty > 0 and price > 0:
-                    price_breaks.append(PriceBreak(
-                        quantity=qty,
-                        price=price,
-                        currency=currency,
-                    ))
+                    price_breaks.append(
+                        PriceBreak(
+                            quantity=qty,
+                            price=price,
+                            currency=currency,
+                        )
+                    )
             except (ValueError, TypeError):
                 continue
 
         # Last resort: single unit price from top-level field
         if not price_breaks:
-            unit_price = raw.get('UnitPrice', 0)
+            unit_price = raw.get("UnitPrice", 0)
             if unit_price:
                 try:
-                    price_breaks.append(PriceBreak(
-                        quantity=1,
-                        price=float(unit_price),
-                        currency=raw.get('Currency', {}).get('Code', 'USD') if isinstance(raw.get('Currency'), dict) else 'USD',
-                    ))
+                    price_breaks.append(
+                        PriceBreak(
+                            quantity=1,
+                            price=float(unit_price),
+                            currency=(
+                                raw.get("Currency", {}).get("Code", "USD")
+                                if isinstance(raw.get("Currency"), dict)
+                                else "USD"
+                            ),
+                        )
+                    )
                 except (ValueError, TypeError):
                     pass
 
         # Parameters
         parameters = []
-        for param in raw.get('Parameters', []):
-            p_name = param.get('ParameterText', '')
-            p_value = param.get('ValueText', '')
+        for param in raw.get("Parameters", []):
+            p_name = param.get("ParameterText", "")
+            p_value = param.get("ValueText", "")
             if p_name and p_value:
-                parameters.append(PartParameter(
-                    name=p_name,
-                    value=p_value,
-                ))
+                parameters.append(
+                    PartParameter(
+                        name=p_name,
+                        value=p_value,
+                    )
+                )
 
         # Stock
         stock = None
-        qty_available = raw.get('QuantityAvailable', None)
+        qty_available = raw.get("QuantityAvailable", None)
         if qty_available is not None:
             try:
                 stock = int(qty_available)
@@ -186,79 +205,83 @@ class DigiKeyClient(BaseApiClient):
 
         # Category
         category_parts = []
-        cat = raw.get('Category', {})
+        cat = raw.get("Category", {})
         if isinstance(cat, dict):
-            cat_name = cat.get('Name', '')
+            cat_name = cat.get("Name", "")
             if cat_name:
                 category_parts.append(cat_name)
             # Check for parent category
-            parent = cat.get('ParentCategory', {})
+            parent = cat.get("ParentCategory", {})
             if isinstance(parent, dict):
-                parent_name = parent.get('Name', '')
+                parent_name = parent.get("Name", "")
                 if parent_name:
                     category_parts.insert(0, parent_name)
         elif isinstance(cat, str):
             category_parts.append(cat)
 
-        category = ' > '.join(category_parts) if category_parts else ''
+        category = " > ".join(category_parts) if category_parts else ""
 
         # Datasheet — DigiKey v4 field name changed across API versions;
         # try all known locations in priority order.
         datasheet_url = (
-            raw.get('DatasheetUrl', '')          # v4 primary field
-            or raw.get('PrimaryDatasheet', '')   # v3 / legacy alias
-            or ''
+            raw.get("DatasheetUrl", "")  # v4 primary field
+            or raw.get("PrimaryDatasheet", "")  # v3 / legacy alias
+            or ""
         )
         if not datasheet_url:
             # MediaLinks array: [{"MediaType": "Datasheets", "Url": "..."}]
-            for link in (raw.get('MediaLinks') or raw.get('MediaLinks', [])):
+            for link in raw.get("MediaLinks") or raw.get("MediaLinks", []):
                 if isinstance(link, dict):
                     media_type = (
-                        link.get('MediaType', '')
-                        or link.get('Type', '')
-                        or link.get('mediaType', '')
+                        link.get("MediaType", "")
+                        or link.get("Type", "")
+                        or link.get("mediaType", "")
                     ).lower()
-                    if 'datasheet' in media_type:
-                        datasheet_url = link.get('Url', '') or link.get('url', '')
+                    if "datasheet" in media_type:
+                        datasheet_url = link.get("Url", "") or link.get("url", "")
                         break
-        if datasheet_url and not datasheet_url.startswith('http'):
-            datasheet_url = f'https://www.digikey.com{datasheet_url}'
+        if datasheet_url and not datasheet_url.startswith("http"):
+            datasheet_url = f"https://www.digikey.com{datasheet_url}"
 
         # Image
-        image_url = ''
-        primary_photo = raw.get('PrimaryPhoto', '')
+        image_url = ""
+        primary_photo = raw.get("PrimaryPhoto", "")
         if primary_photo:
             image_url = primary_photo
 
-        mpn_result = raw.get('ManufacturerPartNumber', search_mpn)
-        manufacturer_info = raw.get('Manufacturer', {})
-        manufacturer = ''
+        mpn_result = raw.get("ManufacturerPartNumber", search_mpn)
+        manufacturer_info = raw.get("Manufacturer", {})
+        manufacturer = ""
         if isinstance(manufacturer_info, dict):
-            manufacturer = manufacturer_info.get('Name', '')
+            manufacturer = manufacturer_info.get("Name", "")
         elif isinstance(manufacturer_info, str):
             manufacturer = manufacturer_info
 
-        description = raw.get('ProductDescription', '') or raw.get('DetailedDescription', '')
+        description = raw.get("ProductDescription", "") or raw.get(
+            "DetailedDescription", ""
+        )
 
         # Packaging
-        package = ''
-        packaging_info = raw.get('Packaging', {})
+        package = ""
+        packaging_info = raw.get("Packaging", {})
         if isinstance(packaging_info, dict):
-            package = packaging_info.get('Name', '')
+            package = packaging_info.get("Name", "")
 
         # DigiKey part number as SKU — fallback chain for edge-case MPNs
         # where the primary field is empty.
-        dk_pn = raw.get('DigiKeyPartNumber', '').strip()
+        dk_pn = raw.get("DigiKeyPartNumber", "").strip()
 
         # Fallback 1: Check ExactDigiKeyPartNumber (v4 alternate field)
         if not dk_pn:
-            dk_pn = raw.get('ExactDigiKeyPartNumber', '').strip()
+            dk_pn = raw.get("ExactDigiKeyPartNumber", "").strip()
 
         # Fallback 2: Packaging/ordering variations may carry a part number
         if not dk_pn:
-            for variation in raw.get('ProductVariations', []):
-                pn = (variation.get('DigiKeyProductNumber', '')
-                      or variation.get('DigiKeyPartNumber', '')).strip()
+            for variation in raw.get("ProductVariations", []):
+                pn = (
+                    variation.get("DigiKeyProductNumber", "")
+                    or variation.get("DigiKeyPartNumber", "")
+                ).strip()
                 if pn:
                     dk_pn = pn
                     break
@@ -268,13 +291,13 @@ class DigiKeyClient(BaseApiClient):
             dk_pn = mpn_result
 
         # Product URL
-        product_url = raw.get('ProductUrl', '')
-        if product_url and not product_url.startswith('http'):
+        product_url = raw.get("ProductUrl", "")
+        if product_url and not product_url.startswith("http"):
             product_url = f"https://www.digikey.com{product_url}"
 
         # Min order
         min_qty = 1
-        min_val = raw.get('MinimumOrderQuantity', None)
+        min_val = raw.get("MinimumOrderQuantity", None)
         if min_val:
             try:
                 min_qty = int(min_val)
@@ -292,7 +315,7 @@ class DigiKeyClient(BaseApiClient):
             description=description,
             name=f"{manufacturer} {mpn_result}" if manufacturer else mpn_result,
             category=category,
-            supplier_name='DigiKey',
+            supplier_name="DigiKey",
             supplier_sku=dk_pn,
             supplier_url=product_url,
             datasheet_url=datasheet_url,
@@ -302,7 +325,7 @@ class DigiKeyClient(BaseApiClient):
             price_breaks=price_breaks,
             stock_available=stock,
             minimum_order_qty=min_qty,
-            source='digikey',
+            source="digikey",
             raw_data=raw,
             confidence=confidence,
         )
@@ -312,26 +335,26 @@ class DigiKeyClient(BaseApiClient):
         try:
             if not self.client_id or not self.client_secret:
                 return {
-                    'success': False,
-                    'message': 'Client ID and/or Client Secret not configured',
+                    "success": False,
+                    "message": "Client ID and/or Client Secret not configured",
                 }
 
             self._authenticate()
             return {
-                'success': True,
-                'message': 'OAuth2 authentication successful. Connection OK.',
-                'details': {
-                    'token_expires_in': int(self._token_expiry - time.time()),
+                "success": True,
+                "message": "OAuth2 authentication successful. Connection OK.",
+                "details": {
+                    "token_expires_in": int(self._token_expiry - time.time()),
                 },
             }
 
         except ApiAuthError as e:
             return {
-                'success': False,
-                'message': f'Authentication failed: {str(e)}',
+                "success": False,
+                "message": f"Authentication failed: {str(e)}",
             }
         except Exception as e:
             return {
-                'success': False,
-                'message': f'Unexpected error: {str(e)}',
+                "success": False,
+                "message": f"Unexpected error: {str(e)}",
             }

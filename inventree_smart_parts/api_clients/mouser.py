@@ -10,14 +10,14 @@ from typing import Optional, Dict, Any, List
 
 from .base import BaseApiClient, PartData, PriceBreak, PartParameter, ApiError
 
-logger = logging.getLogger('inventree_smart_parts.api.mouser')
+logger = logging.getLogger("inventree_smart_parts.api.mouser")
 
 
 class MouserClient(BaseApiClient):
     """Client for the Mouser Electronics Search API v2."""
 
-    SOURCE_NAME = 'mouser'
-    BASE_URL = 'https://api.mouser.com/api/v2'
+    SOURCE_NAME = "mouser"
+    BASE_URL = "https://api.mouser.com/api/v2"
 
     def __init__(self, api_key: str, **kwargs):
         super().__init__(**kwargs)
@@ -34,7 +34,7 @@ class MouserClient(BaseApiClient):
             raise ApiError("Mouser API key is not configured")
 
         url = f"{self.BASE_URL}/search/partnumber"
-        params = {'apiKey': self.api_key}
+        params = {"apiKey": self.api_key}
 
         payload = {
             "SearchByPartRequest": {
@@ -46,19 +46,23 @@ class MouserClient(BaseApiClient):
         }
 
         headers = {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
+            "Content-Type": "application/json",
+            "Accept": "application/json",
         }
 
         logger.info(f"[Mouser] Searching for MPN: {mpn}")
-        data = self._request('POST', url, headers=headers, json_data=payload, params=params)
+        data = self._request(
+            "POST", url, headers=headers, json_data=payload, params=params
+        )
 
         # Parse the response — guard against None/unexpected shape
-        search_results = data.get('SearchResults') or {}
+        search_results = data.get("SearchResults") or {}
         if not isinstance(search_results, dict):
-            logger.warning(f"[Mouser] Unexpected SearchResults type: {type(search_results).__name__}")
+            logger.warning(
+                f"[Mouser] Unexpected SearchResults type: {type(search_results).__name__}"
+            )
             return None
-        parts = search_results.get('Parts') or []
+        parts = search_results.get("Parts") or []
         if not parts:
             logger.info(f"[Mouser] No results found for MPN: {mpn}")
             return None
@@ -76,13 +80,13 @@ class MouserClient(BaseApiClient):
 
         # First pass: exact manufacturer part number match
         for part in parts:
-            mfr_pn = part.get('ManufacturerPartNumber', '').lower().strip()
+            mfr_pn = part.get("ManufacturerPartNumber", "").lower().strip()
             if mfr_pn == mpn_lower:
                 return part
 
         # Second pass: manufacturer part number contains the search term
         for part in parts:
-            mfr_pn = part.get('ManufacturerPartNumber', '').lower().strip()
+            mfr_pn = part.get("ManufacturerPartNumber", "").lower().strip()
             if mpn_lower in mfr_pn:
                 return part
 
@@ -92,38 +96,38 @@ class MouserClient(BaseApiClient):
         """Convert raw Mouser API response to PartData."""
         # Parse price breaks
         price_breaks = []
-        for pb in raw.get('PriceBreaks', []):
+        for pb in raw.get("PriceBreaks", []):
             try:
-                qty = int(pb.get('Quantity', 0))
+                qty = int(pb.get("Quantity", 0))
                 # Price comes as string like "€1.23" or "$1.23"
-                price_str = pb.get('Price', '0')
-                currency = pb.get('Currency', 'EUR')
+                price_str = pb.get("Price", "0")
+                currency = pb.get("Currency", "EUR")
                 # Strip currency symbols and whitespace
-                price_clean = ''.join(
-                    c for c in price_str if c.isdigit() or c in '.,'
-                )
+                price_clean = "".join(c for c in price_str if c.isdigit() or c in ".,")
                 # Handle European comma-as-decimal
-                if ',' in price_clean and '.' not in price_clean:
-                    price_clean = price_clean.replace(',', '.')
-                elif ',' in price_clean and '.' in price_clean:
-                    price_clean = price_clean.replace(',', '')
+                if "," in price_clean and "." not in price_clean:
+                    price_clean = price_clean.replace(",", ".")
+                elif "," in price_clean and "." in price_clean:
+                    price_clean = price_clean.replace(",", "")
 
                 price = float(price_clean) if price_clean else 0.0
 
                 if qty > 0 and price > 0:
-                    price_breaks.append(PriceBreak(
-                        quantity=qty,
-                        price=price,
-                        currency=currency,
-                    ))
+                    price_breaks.append(
+                        PriceBreak(
+                            quantity=qty,
+                            price=price,
+                            currency=currency,
+                        )
+                    )
             except (ValueError, TypeError):
                 continue
 
         # Parse stock
         stock = None
-        availability = raw.get('Availability', '')
+        availability = raw.get("Availability", "")
         if availability:
-            stock_str = ''.join(c for c in availability if c.isdigit())
+            stock_str = "".join(c for c in availability if c.isdigit())
             if stock_str:
                 try:
                     stock = int(stock_str)
@@ -132,47 +136,49 @@ class MouserClient(BaseApiClient):
 
         # Parse parameters from product attributes
         parameters = []
-        for attr_name in ['ProductAttributes']:
+        for attr_name in ["ProductAttributes"]:
             attrs = raw.get(attr_name, []) or []
             for attr in attrs:
-                attr_label = attr.get('AttributeName', '')
-                attr_value = attr.get('AttributeValue', '')
+                attr_label = attr.get("AttributeName", "")
+                attr_value = attr.get("AttributeValue", "")
                 if attr_label and attr_value:
-                    parameters.append(PartParameter(
-                        name=attr_label,
-                        value=attr_value,
-                    ))
+                    parameters.append(
+                        PartParameter(
+                            name=attr_label,
+                            value=attr_value,
+                        )
+                    )
 
         # Build the normalized PartData
-        mpn_result = raw.get('ManufacturerPartNumber', search_mpn)
-        manufacturer = raw.get('Manufacturer', '')
-        description = raw.get('Description', '')
+        mpn_result = raw.get("ManufacturerPartNumber", search_mpn)
+        manufacturer = raw.get("Manufacturer", "")
+        description = raw.get("Description", "")
 
         # Category from Mouser
-        category = raw.get('Category', '')
+        category = raw.get("Category", "")
 
         # Datasheet — Mouser uses 'DataSheetUrl'; also guard against '#' placeholders
         datasheet_url = (
-            raw.get('DataSheetUrl', '')   # Mouser v2 standard field
-            or raw.get('DatasheetUrl', '') # alternate casing seen in some responses
-            or ''
+            raw.get("DataSheetUrl", "")  # Mouser v2 standard field
+            or raw.get("DatasheetUrl", "")  # alternate casing seen in some responses
+            or ""
         )
         # Mouser sometimes returns '#' when no datasheet is available
-        if datasheet_url and not datasheet_url.startswith('http'):
-            datasheet_url = ''
+        if datasheet_url and not datasheet_url.startswith("http"):
+            datasheet_url = ""
 
         # Image
-        image_url = raw.get('ImagePath', '')
+        image_url = raw.get("ImagePath", "")
 
         # Mouser part number as SKU
-        mouser_pn = raw.get('MouserPartNumber', '')
+        mouser_pn = raw.get("MouserPartNumber", "")
 
         # Product URL
-        product_url = raw.get('ProductDetailUrl', '')
+        product_url = raw.get("ProductDetailUrl", "")
 
         # Min order qty
         min_qty = 1
-        min_str = raw.get('Min', '')
+        min_str = raw.get("Min", "")
         if min_str:
             try:
                 min_qty = int(min_str)
@@ -181,7 +187,7 @@ class MouserClient(BaseApiClient):
 
         # Order multiple
         mult = 1
-        mult_str = raw.get('Mult', '')
+        mult_str = raw.get("Mult", "")
         if mult_str:
             try:
                 mult = int(mult_str)
@@ -199,7 +205,7 @@ class MouserClient(BaseApiClient):
             description=description,
             name=f"{manufacturer} {mpn_result}" if manufacturer else mpn_result,
             category=category,
-            supplier_name='Mouser',
+            supplier_name="Mouser",
             supplier_sku=mouser_pn,
             supplier_url=product_url,
             datasheet_url=datasheet_url,
@@ -209,7 +215,7 @@ class MouserClient(BaseApiClient):
             stock_available=stock,
             minimum_order_qty=min_qty,
             order_multiple=mult,
-            source='mouser',
+            source="mouser",
             raw_data=raw,
             confidence=confidence,
         )
@@ -219,34 +225,34 @@ class MouserClient(BaseApiClient):
         try:
             if not self.api_key:
                 return {
-                    'success': False,
-                    'message': 'API key is not configured',
+                    "success": False,
+                    "message": "API key is not configured",
                 }
 
             # Search for a well-known part as a connectivity test
-            result = self.search_by_mpn('LM7805')
+            result = self.search_by_mpn("LM7805")
             if result:
                 return {
-                    'success': True,
-                    'message': f'Connected successfully. Test search returned: {result.mpn}',
-                    'details': {
-                        'test_mpn': result.mpn,
-                        'manufacturer': result.manufacturer,
+                    "success": True,
+                    "message": f"Connected successfully. Test search returned: {result.mpn}",
+                    "details": {
+                        "test_mpn": result.mpn,
+                        "manufacturer": result.manufacturer,
                     },
                 }
             else:
                 return {
-                    'success': True,
-                    'message': 'Connected, but test search returned no results.',
+                    "success": True,
+                    "message": "Connected, but test search returned no results.",
                 }
 
         except ApiError as e:
             return {
-                'success': False,
-                'message': f'Connection failed: {str(e)}',
+                "success": False,
+                "message": f"Connection failed: {str(e)}",
             }
         except Exception as e:
             return {
-                'success': False,
-                'message': f'Unexpected error: {str(e)}',
+                "success": False,
+                "message": f"Unexpected error: {str(e)}",
             }
