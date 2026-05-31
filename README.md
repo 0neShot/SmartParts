@@ -1,243 +1,266 @@
-<p align="center">
-  <h1 align="center">⚡ SmartParts — Intelligent InvenTree Plugin</h1>
-  <p align="center">
-    Zero-click barcode scanning · MPN auto-lookup · Altium BOM import · PureScan warehouse terminal
-  </p>
-</p>
+# ⚡ SmartParts — Intelligent InvenTree Plugin
+
+[![Python Support](https://img.shields.io/badge/python-3.9%20%7C%203.10%20%7C%203.11%20%7C%203.12%20%7C%203.13-blue.svg)](https://www.python.org/)
+[![InvenTree Support](https://img.shields.io/badge/InvenTree-%E2%89%A5%200.15.x-green.svg)](https://inventree.org/)
+[![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![PEP 8 Compliance](https://img.shields.io/badge/pep8-compliant-orange.svg)](https://pep8.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+An exceptionally powerful, feature-rich assistant for [InvenTree](https://inventree.org/) designed to automate and simplify your component intake, cataloging, and warehouse operations. 
+
+From **zero-click distributor barcode scanning** to a **100% keyboard-and-mouse-free warehouse terminal**, SmartParts eliminates manual entry errors and supercharges efficiency.
+
+![Dashboard Overview PureScan](https://raw.githubusercontent.com/wiki/0neShot/SmartParts/images/SmartParts-dashboard-view.png)
+---
+
+## 📌 Executive Feature Overview
+
+| Module | Core Capability | Key Technical Feature |
+| :--- | :--- | :--- |
+| **Multi-Source MPN Lookup** | Single scan retrieves full component specs across 5 major distributor APIs. | Integrated clients for **Mouser, DigiKey, LCSC, TME, and element14**. |
+| **Self-Learning Parameter Normalization** | Automatically cleans and standardizes electrical/mechanical values into canonical units. | Regex-based sanitization pre-processing, custom overrides, and a **"Catch & Learn"** database mapping UI. |
+| **Dedicated Mapping Dashboard** | Clean management UI under `/parameters/` with autocomplete and ignore drop heuristics. | Dynamic search inputs populated by DB `ParameterTemplate` names + built-in schemas. |
+| **PureScan Terminal** | 100% mouse-free kiosk terminal for high-speed stock operations. | Barcode-driven state machine with quantity accumulator, location lookup, and print auto-routing. |
+| **Hardware Barcode Integration** | Native parsing of complex distributor label formats. | **Keyboard Wedge GS (ASCII 29)** parser for high-density DataMatrix barcodes. |
+| **Batch BOM Import** | Bulk-creates parts from CAD BOMs with smart duplicate handling. | Fuzzy category auto-mapping with interactive user correction learning. |
+| **Automated Label Dispatch** | Auto-generates and routes labels upon stock actions. | Deep integration with Zebra/Dymo network printers and PDF print engines. |
+| **Clean Logging & Security** | File-backed thread-safe activity logging and URL credential stripping. | Robust URL regex filters that scrub API keys, parameters, and tokens from exception tracebacks. |
 
 ---
 
-## Overview
+## 🔌 Multi-Source Distributor API Integration
 
-**SmartParts** is a feature-rich [InvenTree](https://inventree.org/) plugin that transforms your inventory management into a streamlined, largely automated workflow. It covers the full lifecycle from **part discovery** to **warehouse operations**:
+SmartParts query engines run simultaneously to fetch high-fidelity data sheets, packaging info, price breaks, and images. 
 
-![Dashboard Overview PureScan](https://raw.githubusercontent.com/wiki/0neShot/SmartParts/images/SmartParts-dashboard-view.png)
+```
+                                      ┌── Mouser API (v2)
+                                      ├── DigiKey API (v4 OAuth2)
+[Scan Barcode] ──► [Multi-API Search] ├── LCSC Search Engine
+                                      ├── TME API (HMAC-SHA1 signed)
+                                      └── element14 / Farnell REST API
+```
 
-| Module | Description |
-|--------|-------------|
-| **MPN Lookup** | Scan a distributor bag barcode → auto-search Mouser, DigiKey, and LCSC APIs → create the part with full specs, images, and parameters |
-| **Batch BOM Import** | Drag & drop an Altium Designer BOM (`.csv`/`.xlsx`) → intelligent column mapping → bulk part creation with category learning |
-| **PureScan Terminal** | 100% mouse-free warehouse terminal — Transfer, Add, Remove, Stocktake, Info, and Undo via sequential barcode scans |
-| **Auto Label Printing** | Every stock transfer or receive triggers automatic label printing to Dymo/Zebra printers |
+* **Dual-Mode Header Handling:** Transparently switches user-agents to bypass Akamai/bot-protection networks on strict distributor platforms (e.g. Mouser) without sacrificing reliability.
+* **Intelligent Media Pipeline:** Downloads product images, probes dimensions, validates `Content-Type` headers, verifies magic bytes, and auto-compresses them before attaching them to InvenTree parts. 
+* **Fallback Priority Order:** Configurable search fallbacks ensure that if one API lacks detail or encounters a rate limit, other enabled distributors automatically fill the missing fields.
+* **API Connection Diagnostic Tests:** Instant test endpoints accessible in settings that confirm credentials, returning standard unified messaging (e.g. `Connected successfully. Test search returned: LM7805`).
+* **Robust Credential Filtering:** Exception filters automatically strip query parameters from error stack-traces (e.g., hiding developer keys, tokens, or search payloads) before writing to logs.
 
-## Requirements
+---
 
-- **InvenTree** ≥ 0.15.x (tested on 0.17.x)
-- **Python** ≥ 3.9
-- Python packages: `requests`, `openpyxl` (auto-installed)
+## 🧠 Self-Learning Parameter Normalization Engine
 
-### Optional
+Distributors represent the exact same component parameters under thousands of different naming schemas (e.g., `"Mounting Type"`, `"IC Mounting"`, `"Capacitance"`, `"Capacitance - Value"`). The normalization engine ensures your database remains immaculate.
 
-- **Mouser API key** — for MPN lookup via Mouser
-- **DigiKey API credentials** — for MPN lookup via DigiKey (OAuth2)
-- **Label printer plugin** — e.g. [inventree-dymo-plugin](https://github.com/inventree/inventree-dymo-plugin) for physical label printing
+### 1. Regex-Based Name Sanitization
+Before matching parameters, raw distributor strings undergo a multi-stage regex pre-processing step:
+* Strips non-alphanumeric punctuation (hyphens, underscores, brackets, parentheses, slashes).
+* Normalizes double spacing and trims whitespace.
+* Converts to lowercase to guarantee deterministic matching against the map.
+* *Example:* `"Output Voltage - Nom"` ──► `"output voltage nom"` ──► matches **Voltage Rating**.
 
-## Installation
+### 2. Value & Unit Normalization
+Electrical units are mathematically parsed, scaled, and formatted into standard engineering/SI notation:
+* **Capacitance:** `0.00001 F` or `10 microfarad` ──► `10 µF`; `0.1uF` ──► `100 nF`.
+* **Resistance:** `4k7` or `4.7 kohm` ──► `4.7 kΩ`; `1000000 ohm` ──► `1 MΩ`.
+* **Inductance:** `100uH` ──► `100 µH`; `0.0022 H` ──► `2.2 mH`.
+* **Voltage & Current:** `100mV` ──► `100 mV`; `0.001 A` ──► `1 mA`.
 
-### Method 1: UI install (recommended)
+### 3. The Dedicated Mapping Dashboard (`/plugin/smartparts/parameters/`)
+Unknown or unrecognized distributor parameters are handled dynamically via a dedicated management page:
 
-You can install the plugin directly through the InvenTree web interface without touching the command line.
-Make sure to enable:
-- Enable App integration
-- Enable URL integration
-- Enable navigation integration
-- Enable interface integration
-- Enable event integration
+* **Pending Parameters Table:** Logs incoming unknown parameters, displaying the distributor name and incrementing their appearance count.
+* **Active Mappings Table:** Clear, sortable dashboard of all established parameter rules.
+* **Autocomplete canonical dropdowns:** Users can map raw parameters using a live dropdown menu populated by database-backed InvenTree `ParameterTemplate` titles combined with the 100+ standard electronic unit names.
+* **Permanent Drop Heuristics (Ignore):** Mark a parameter as permanently ignored to completely drop it during the merge/creation pipeline, keeping your database completely free of useless placeholders (e.g., standard packaging details).
 
-1. Navigate to **Settings** -> **Plugins** in your InvenTree instance.
-2. Click on the **Install Plugin** button.
-3. Fill in the installation form exactly like this:
-   * **Package Name:** `inventree-smart-parts`
-   * **Source URL:** `git+https://github.com/0neShot/SmartParts.git#egg=inventree-smart-parts`
-4. Click **Install**. 
+---
 
-Then restart InvenTree and activate the plugin in **Admin → Plugins**.
+## 🎯 PureScan Warehouse Terminal
 
-## Configuration
-
-After installation, navigate to **InvenTree → Admin → Plugins → SmartParts → Settings**.
-
-### API Keys
-
-| Setting | Description |
-|---------|-------------|
-| `MOUSER_ENABLED` | Enable/disable Mouser API |
-| `MOUSER_API_KEY` | Your Mouser Search API key |
-| `DIGIKEY_ENABLED` | Enable/disable DigiKey API |
-| `DIGIKEY_CLIENT_ID` | DigiKey OAuth2 Client ID |
-| `DIGIKEY_CLIENT_SECRET` | DigiKey OAuth2 Client Secret |
-| `LCSC_ENABLED` | Enable/disable LCSC lookup |
-
-### Stock & Labels
-
-| Setting | Description |
-|---------|-------------|
-| `DEFAULT_STOCK_LOCATION` | Default location ID for new stock items |
-| `DEFAULT_STOCK_LABEL` | Label template ID for auto-printing |
-| `DEFAULT_PRINT_PLUGIN` | Printer plugin slug (e.g. `inventreelabelmachine` for Dymo/Zebra) |
-
-### Category Learning
-
-| Setting | Description |
-|---------|-------------|
-| `LEARNED_CATEGORY_MAPPINGS` | JSON dictionary of learned part-name → category-ID overrides |
-| `CATEGORY_SYNONYMS` | JSON dictionary of category name synonyms |
-
-> **Tip:** The plugin auto-learns category overrides when you manually correct a category assignment. These are persisted and applied automatically on future imports.
-
-## Usage
-
-### 1. MPN Scanner (Zero-Click Receive)
-
-1. Open the SmartParts dashboard
-2. Scan a distributor barcode (Mouser, DigiKey, or LCSC bag label)
-3. The scanner auto-detects the MPN, searches all enabled APIs, and shows the result
-4. Click **Create Part + Stock** to receive the part with one click
-5. A label is automatically sent to your configured printer
-
-### 2. Batch BOM Import
-
-1. Click **Batch Import** in the SmartParts dashboard
-2. Upload an Altium Designer BOM file (`.csv` or `.xlsx`)
-3. Map columns using the intelligent auto-mapper
-4. Review the preview — the system auto-detects duplicates and suggests categories
-5. Click **Import All** to create parts and stock in bulk
-
-### 3. PureScan Terminal
-
-PureScan is a full-screen, 100% keyboard-free warehouse terminal controlled entirely by barcode scanning.
+PureScan is a full-screen, responsive, 100% keyboard-and-mouse-free interface designed for tablet, desktop, or mobile kiosk deployment.
 
 ![Dashboard Overview PureScan](https://raw.githubusercontent.com/wiki/0neShot/SmartParts/images/PureScan-terminal-view.png)
 
-#### Getting Started
+### How to Get Started
+1. Open the **PureScan Terminal** from the InvenTree navigation bar or SmartParts dashboard.
+2. Print the **Command Sheet** (which can be generated dynamically using the built-in standalone QR generator under `purescan/commands/`).
+3. Mount the sheet near your barcode scanner station.
 
-1. Open PureScan from the SmartParts dashboard
-2. Print the **Command Sheet** (accessible from PureScan or the dashboard)
-3. Place the printed sheet at your warehouse workstation
-
-#### Workflow
-
+### The Command Workflow
 ```
-Scan ACTION code → Scan ITEM barcode → [Scan QTY codes] → Auto-execute
+[Scan Action Code] ──► [Scan Item Barcode] ──► [Scan QTY Code(s)] ──► [Auto-Executes]
 ```
 
-#### Available Actions
+> [!TIP]
+> **The Quantity Accumulator System:** 
+> Multiple quantity scans within a 3-second window will automatically **accumulate** (e.g., scanning `QTY:10` twice = `QTY:20`). The action fires automatically once the 3-second timer expires, removing the need for a physical keyboard or manual confirmation clicks.
 
-| Code | Action | Description |
-|------|--------|-------------|
-| `SYS:TRANSFER` | Transfer | Move stock to a new location |
-| `SYS:ADD` | Add | Add quantity to stock |
-| `SYS:REMOVE` | Remove | Remove quantity (with depletion safeguard) |
-| `SYS:STOCKTAKE` | Stocktake | Set exact count |
-| `SYS:INFO` | Info | Lookup stock item or location details |
-| `SYS:UNDO` | Undo | Revert the last action |
-| `SYS:CANCEL` | Cancel | Reset to idle |
-| `SYS:CLEARLOG` | Clear | Clear the action log |
+### Available Physical Barcode Actions
 
-#### Quantity Combo System
+| Barcode Code | Action | Details |
+| :--- | :--- | :--- |
+| `SYS:TRANSFER` | **Transfer Stock** | Relocates a stock item. Prompts to scan destination location barcode. |
+| `SYS:ADD` | **Add Stock** | Increments quantity of the scanned stock item. |
+| `SYS:REMOVE` | **Remove Stock** | Decrements quantity (with automatic negative depletion safeguards). |
+| `SYS:STOCKTAKE` | **Stocktake** | Overwrites the current count with the exact physical count scanned. |
+| `SYS:INFO` | **Lookup Info** | Displays full stock details, location tree, part specifications, and image. |
+| `SYS:UNDO` | **Undo Last** | Reverts the immediately preceding transaction (e.g., in case of a scanning mistake). |
+| `SYS:CANCEL` | **Reset Terminal** | Immediately aborts the current transaction and resets to the idle scanning state. |
 
-For Add/Remove/Stocktake, scan quantity codes (`SYS:QTY:1`, `SYS:QTY:5`, etc.) to set the amount. Multiple scans within 3 seconds **accumulate** (e.g., scanning QTY:10 twice = 20). The action auto-fires after the 3-second timeout.
+---
 
-#### Location Lookup
+## 🏷️ Hardware Barcode Scanner Integration
 
-Scan any **StockLocation** barcode in idle state to see a complete inventory table of all items at that location, with part thumbnails and quantities.
+SmartParts contains a robust Keyboard Wedge parsing pipeline designed to interpret high-density DataMatrix labels used by wholesale suppliers:
 
-#### Auto Label Printing
+* **GS character handling:** Translates raw hardware keyboard wedge streams containing non-printable **GS (Group Separator, ASCII 29)** characters.
+* **Intelligent Splitting:** Splits multi-field DataMatrix codes containing Supplier PN, Manufacturer PN (MPN), Lot Code, Date Code, and exact packaging quantities in a single trigger pull.
+* **Instant Creation:** Automatically checks InvenTree for duplicates, creates the part if missing, creates the stock record, and fires a print job to the physical label printer.
 
-Every successful **Transfer** automatically sends a label print job to your configured printer, so the physical label always matches the new location.
+---
 
-#### Persistent History
+## ⚙️ Configuration Reference
 
-The action log survives browser refreshes (stored in `localStorage`). All actions include audit notes in the InvenTree database (e.g., "Transferred via PureScan").
+Configure settings in **InvenTree Settings → Admin Center → Plugins → SmartParts**.
 
-### 4. Command Sheet
+### 1. Distributor API Settings
 
-Print the Command Sheet from:
-- PureScan Terminal → button bar
-- SmartParts Dashboard → PureScan section
+| Key | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `MOUSER_ENABLED` | `bool` | `True` | Enable/disable Mouser Search API. |
+| `MOUSER_API_KEY` | `str` | `""` | Mouser Electronics Search API v2 key. |
+| `DIGIKEY_ENABLED` | `bool` | `True` | Enable/disable DigiKey API. |
+| `DIGIKEY_CLIENT_ID` | `str` | `""` | OAuth2 Client ID for DigiKey API v4. |
+| `DIGIKEY_CLIENT_SECRET`| `str` | `""` | OAuth2 Client Secret for DigiKey API v4. |
+| `LCSC_ENABLED` | `bool` | `True` | Enable LCSC lookup (does not require authentication keys). |
+| `ELEMENT14_ENABLED` | `bool` | `False` | Enable element14/Farnell/Newark lookup. |
+| `ELEMENT14_API_KEY` | `str` | `""` | REST API Key registered at Farnell's Partner portal. |
+| `ELEMENT14_STORE` | `str` | `"uk.farnell.com"`| Storefront to query (e.g., `de.farnell.com`, `www.newark.com`). |
+| `TME_ENABLED` | `bool` | `False` | Enable TME.eu lookup. |
+| `TME_API_TOKEN` | `str` | `""` | Public Developer Token for TME REST API. |
+| `TME_API_SECRET` | `str` | `""` | HMAC signature key for TME. |
+| `TME_COUNTRY` | `str` | `"DE"` | Two-letter country code for price/stock calculation. |
+| `TME_CURRENCY` | `str` | `"EUR"` | Currency for TME price breaks (e.g. `EUR`, `USD`, `PLN`). |
 
-The sheet prints as **two clean A4 pages**:
-- **Page 1:** Action codes + Deep Link QR (scan to open PureScan on mobile)
-- **Page 2:** Quantity codes
+### 2. Merging, Duplicates & Learning Settings
 
-## Project Structure
+| Key | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `API_PRIORITY` | `str` | `"mouser,digikey,element14,tme,lcsc"` | Comma-separated list specifying the source merge priority. |
+| `FUZZY_THRESHOLD` | `int` | `45` | Minimum confidence score (0-100) for category auto-mapping. |
+| `DEFAULT_CATEGORY` | `str` | `"Uncategorized"` | Default category path if no fuzzy match passes threshold. |
+| `DUPLICATE_ACTION` | `str` | `"ask"` | Duplicate MPN action: `"ask"`, `"update"`, or `"skip"`. |
+| `LEARNED_PARAMETER_MAPPINGS`| `JSON` | `"{}"` | Map rules for raw distributor parameters to canonical names. |
+| `TRACKED_UNKNOWN_PARAMETERS`| `JSON` | `"{}"` | Auto-logged list of unrecognized parameters awaiting manual mapping. |
+| `LEARNED_CATEGORY_MAPPINGS` | `JSON` | `"{}"` | Auto-learned manual category correction overrides. |
+
+### 3. Stock, Label Printing & General Settings
+
+| Key | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `AUTO_CREATE_MANUFACTURERS`| `bool` | `True` | Auto-create the manufacturer Company in InvenTree if not present. |
+| `AUTO_CREATE_SUPPLIERS` | `bool` | `True` | Auto-create the supplier Company in InvenTree if not present. |
+| `DEFAULT_STOCK_LABEL` | `int` | `0` | Default template ID for physical stock labels. |
+| `DEFAULT_PRINT_PLUGIN` | `str` | `""` | Specific printer plugin slug (e.g. `"inventreelabelmachine"`). |
+| `LOG_RETENTION_DAYS` | `int` | `30` | Number of days to retain system log entries. |
+
+---
+
+## 🛠️ Installation & Setup
+
+### Direct UI Installation (Recommended)
+
+1. Go to your InvenTree dashboard.
+2. Select **Settings** ──► **Plugins** ──► **Install Plugin**.
+3. Configure the installation details:
+   * **Package Name:** `inventree-smart-parts`
+   * **Source URL:** `git+https://github.com/0neShot/SmartParts.git#egg=inventree-smart-parts`
+4. Confirm by clicking **Install**.
+5. Restart your InvenTree server and background worker containers:
+   ```bash
+   docker restart inventree-server inventree-worker
+   ```
+6. Log in as an Administrator, navigate to the **Plugin Admin Center**, and toggle the `SmartParts` activation checkbox to active.
+
+> [!IMPORTANT]
+> **Required Mixin Permissions:**
+> Ensure that you enable all plugin integrations in InvenTree settings:
+> * Enable App integration
+> * Enable URL integration
+> * Enable navigation integration
+> * Enable interface integration
+> * Enable event integration
+
+---
+
+## 📂 Project Architecture
 
 ```
 SmartParts/
-├── setup.py                          # Package installation
-├── MANIFEST.in                       # Include templates/static in package
-├── LICENSE                           # MIT License
-├── README.md                         # This file
+├── setup.py                          # Setup packaging file
+├── MANIFEST.in                       # Asset packing manifests
+├── README.md                         # Product Documentation (This file)
 │
-└── inventree_smart_parts/            # Main plugin package
-    ├── __init__.py                   # Package init
-    ├── core.py                       # Plugin class, settings, URL routing
-    ├── views.py                      # All HTTP views and API endpoints
+└── inventree_smart_parts/            # Core Package Directory
+    ├── __init__.py                   # Core package loader
+    ├── core.py                       # Main plugin lifecycle, settings, and routing
+    ├── views.py                      # HTTP views, API endpoints, and data interfaces
     │
-    ├── api_clients/                  # External API integrations
-    │   ├── base.py                   # Base HTTP client
-    │   ├── mouser.py                 # Mouser Search API
-    │   ├── digikey.py                # DigiKey Product API
-    │   └── lcsc.py                   # LCSC lookup
+    ├── api_clients/                  # External Distributor Clients
+    │   ├── base.py                   # Standard HTTP Client with bot bypass and regex credential filtering
+    │   ├── mouser.py                 # Mouser Search API Integration
+    │   ├── digikey.py                # DigiKey API integration
+    │   ├── lcsc.py                   # LCSC HTML scraper client
+    │   ├── element14.py              # element14/Farnell/Newark REST Client
+    │   └── tme.py                    # TME API Integration with HMAC signatures
     │
-    ├── services/                     # Business logic layer
-    │   ├── activity_logger.py        # Activity logging
-    │   ├── assembly_builder.py       # Assembly/BOM creation
-    │   ├── category_mapper.py        # Fuzzy category matching + learning
-    │   ├── data_merger.py            # Multi-API result merging
-    │   ├── duplicate_checker.py      # Duplicate part detection
-    │   ├── image_handler.py          # Part image download & attach
-    │   ├── parameter_normalizer.py   # Parameter value normalization
-    │   ├── part_creator.py           # Full part creation pipeline
-    │   └── stock_manager.py          # Stock creation & label printing
+    ├── services/                     # Business Logic
+    │   ├── activity_logger.py        # Transaction logger & DB persistence (smart_parts_activity.jsonl)
+    │   ├── assembly_builder.py       # Assembly & BOM parsing mechanisms
+    │   ├── category_mapper.py        # Category heuristics fuzzy mapping
+    │   ├── data_merger.py            # Multi-API database merging & parsing
+    │   ├── duplicate_checker.py      # Prevent exact/fuzzy duplicate MPNs
+    │   ├── image_handler.py          # Probing & downloading images
+    │   ├── parameter_normalizer.py   # Regex sanitization & unit scale engine
+    │   ├── part_creator.py           # Core InvenTree part generation
+    │   └── stock_manager.py          # Stock manipulation and print manager
     │
-    ├── batch/                        # Batch import module
-    │   ├── altium_parser.py          # Altium BOM parser
-    │   └── importer.py               # Batch import pipeline
+    ├── batch/                        # CAD Import Layer
+    │   ├── altium_parser.py          # Parses CSV/XLSX BOMs from Altium Designer
+    │   └── importer.py               # Handles large spreadsheet bulk imports
     │
-    ├── tools/                        # Utilities
-    │   ├── generate_command_sheet.py  # Standalone QR sheet generator
-    │   └── command_sheet.html         # Standalone HTML template
+    ├── tools/                        # Utility Scripts
+    │   └── generate_command_sheet.py # Python SVG Command Sheet generator
     │
-    ├── templates/                    # Django templates
+    ├── templates/                    # Django HTML Templates
     │   └── inventree_smart_parts/
-    │       ├── dashboard.html        # Main plugin dashboard
-    │       ├── settings_page.html    # Settings configuration UI
-    │       ├── batch_import.html     # Batch BOM import page
-    │       ├── purescan.html         # PureScan terminal UI
-    │       ├── purescan_commands.html # Command Sheet (print-ready)
-    │       ├── search_results.html   # MPN search results
-    │       └── logs.html             # Activity log viewer
+    │       ├── dashboard.html        # SmartParts control panel
+    │       ├── settings_page.html    # Custom mappings & settings UI
+    │       ├── parameter_dashboard.html # Dedicated Parameter Mappings Dashboard
+    │       ├── logs.html             # System log viewer console page
+    │       ├── batch_import.html     # CAD BOM importer page
+    │       ├── purescan.html         # PureScan terminal panel
+    │       ├── purescan_commands.html# PureScan QR deep-link command sheet
+    │       └── search_results.html   # Component API details
     │
-    └── static/                       # Frontend assets
+    └── static/                       # Static CSS/JS assets
         └── inventree_smart_parts/ui/
-            ├── purescan.js           # PureScan state machine
-            ├── scanner.js            # Barcode scanner engine
-            ├── editor_main.js        # Part editor logic
-            ├── editor_helpers.js     # Editor utilities
-            ├── editor.css            # Editor styles
-            ├── smartparts_dashboard.js
-            ├── smartparts_nav.js
-            └── smartparts_panel.js
+            ├── purescan.js           # Kiosk interface state machine
+            └── scanner.js            # Wedge GS barcode engine
 ```
 
-## 🌟 The Vision (Why I built this)
+---
 
-Integrating an inventory of over 20,000 components, manually entering data is simply not an option. While InvenTree is a fantastic inventory management system, it lacked a direct, user-friendly part creation tool for suppliers like Mouser or Digikey. 
+## 🌟 The Vision
 
-I evaluated existing solutions like Ki-nTree and various CLI tools, but they either lacked the specific feature set I needed or were far too complex for non-technical users. I needed a solution that anyone on the warehouse floor could use effortlessly, across different devices, without requiring constant IT support. 
+When dealing with thousands of individual electronic components, typing out manufacturing data, searching for datasheets, and creating part parameters manually is a massive waste of valuable engineering time.
 
-Crucially, none of the alternatives offered robust, native barcode parsing support out of the box. 
+I built SmartParts to solve this headache cleanly. By combining **distributor aggregation**, **standardized parameter cleaning**, and a **fully physical-barcode-driven interface** into a seamless InvenTree GUI plugin, I automated our Formula Student inventory management.
 
-My ultimate vision for SmartParts was simple: **1 Scan + 1 Click.**
-Scan a manufacturer's barcode, click one button, and immediately have all packaging information and parameters populated, datasheets linked, multiple suppliers attached, labels ready to print, and the part cleanly documented in the database.
+**1 Scan + 1 Click = Done.**
 
-## License
+---
 
-MIT License — see [LICENSE](LICENSE) for details.
-
-## Credits
-
-Built by **0neShot** / StarkStrom Augsburg e.V.
-
-Powered by [InvenTree](https://inventree.org/) — the open-source inventory management system.
+*Developed with passion by **0neShot** / StarkStrom Augsburg e.V.*
+*Powered by [InvenTree](https://inventree.org/)*
