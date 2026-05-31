@@ -632,9 +632,22 @@ def _create_parameters(part, parameters: List[Any]):
     part_type = ContentType.objects.get_for_model(part)
     skipped = 0
 
+    from plugin.registry import registry
+
+    plugin = None
+    try:
+        plugin = registry.get_plugin("smartparts")
+    except Exception:
+        pass
+    from .parameter_normalizer import is_parameter_ignored
+
     for param in parameters:
-        # Drop parameters without a name or with a useless value
-        if not param.name or is_useless_value(getattr(param, "value", None)):
+        # Drop parameters without a name, with a useless value, or if explicitly ignored
+        if (
+            not param.name
+            or is_useless_value(getattr(param, "value", None))
+            or is_parameter_ignored(param.name, plugin)
+        ):
             skipped += 1
             continue
 

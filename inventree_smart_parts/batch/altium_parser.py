@@ -32,7 +32,7 @@ Both are returned together for the frontend to pre-fill the
 
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Tuple, Optional, Dict, List
 
 logger = logging.getLogger("inventree_smart_parts.batch.altium")

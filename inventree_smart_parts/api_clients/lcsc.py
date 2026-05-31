@@ -8,7 +8,7 @@ LCSC does not require an API key – it uses public search endpoints.
 import logging
 from typing import Optional, Dict, Any, List
 
-from .base import BaseApiClient, PartData, PriceBreak, PartParameter, ApiError
+from .base import BaseApiClient, PartData, PriceBreak, PartParameter
 
 logger = logging.getLogger("inventree_smart_parts.api.lcsc")
 
@@ -200,7 +200,7 @@ class LCSCClient(BaseApiClient):
             if result:
                 return {
                     "success": True,
-                    "message": f"Connected. Test search found: {result.mpn}",
+                    "message": f"Connected successfully. Test search returned: {result.mpn}",
                     "details": {
                         "test_mpn": result.mpn,
                         "manufacturer": result.manufacturer,
@@ -209,10 +209,12 @@ class LCSCClient(BaseApiClient):
             else:
                 return {
                     "success": True,
-                    "message": "Connected, but test search returned no results.",
+                    "message": "Connected successfully, but test search returned no results.",
                 }
         except Exception as e:
+            from .base import sanitize_error_message
+
             return {
                 "success": False,
-                "message": f"Connection failed: {str(e)}",
+                "message": f"Connection failed: {sanitize_error_message(str(e))}",
             }

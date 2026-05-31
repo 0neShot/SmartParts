@@ -186,6 +186,11 @@
       <span class="sp-nav-label">API Settings</span>
       <span class="sp-nav-desc">Configure &amp; test API keys</span>
     </a>
+    <a href="parameters/" class="sp-nav-card">
+      <span class="sp-nav-icon"><i class="fas fa-brain"></i></span>
+      <span class="sp-nav-label">Parameter Dashboard</span>
+      <span class="sp-nav-desc">Map &amp; normalize parameters</span>
+    </a>
     <a href="logs/" class="sp-nav-card">
       <span class="sp-nav-icon"><i class="fas fa-list-alt"></i></span>
       <span class="sp-nav-label">Activity Log</span>
@@ -212,6 +217,16 @@
           <span>LCSC</span>
           <span><span class="sp-status-dot {% if lcsc_enabled %}active{% else %}inactive{% endif %}"></span>
           {% if lcsc_enabled %}Active{% else %}Inactive{% endif %}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span>Farnell / element14</span>
+          <span><span class="sp-status-dot {% if element14_enabled %}active{% else %}inactive{% endif %}"></span>
+          {% if element14_enabled %}Active{% else %}Inactive{% endif %}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span>TME</span>
+          <span><span class="sp-status-dot {% if tme_enabled %}active{% else %}inactive{% endif %}"></span>
+          {% if tme_enabled %}Active{% else %}Inactive{% endif %}</span>
         </div>
       </div>
     </div>

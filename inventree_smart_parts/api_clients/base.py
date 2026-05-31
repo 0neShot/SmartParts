@@ -18,6 +18,15 @@ from urllib3.util.retry import Retry
 logger = logging.getLogger("inventree_smart_parts.api")
 
 
+def sanitize_error_message(msg: str) -> str:
+    """Strip query parameters from URLs inside the error message to prevent credential/parameter leaks."""
+    if not msg:
+        return msg
+    import re
+
+    return re.sub(r"\?[^\s'\"]*", "", msg)
+
+
 # ═══════════════════════════════════════════════════════════════════
 #  Shared Data Structures
 # ═══════════════════════════════════════════════════════════════════
@@ -192,25 +201,33 @@ class BaseApiClient(ABC):
             return data
 
         except requests.exceptions.Timeout:
-            logger.error(f"[{self.SOURCE_NAME}] Request timeout for URL: {url}")
+            cleaned_url = url.split("?")[0]
+            logger.error(f"[{self.SOURCE_NAME}] Request timeout for URL: {cleaned_url}")
             raise ApiTimeoutError(f"{self.SOURCE_NAME} API request timed out")
 
         except requests.exceptions.HTTPError as e:
             status = e.response.status_code if e.response is not None else "unknown"
-            logger.error(f"[{self.SOURCE_NAME}] HTTP {status} error: {e}")
+            raw_err_msg = str(e)
+            cleaned_msg = sanitize_error_message(raw_err_msg)
+            logger.error(f"[{self.SOURCE_NAME}] HTTP {status} error: {cleaned_msg}")
             raise ApiHttpError(
-                f"{self.SOURCE_NAME} API returned HTTP {status}",
+                f"{self.SOURCE_NAME} API returned HTTP {status}: {cleaned_msg}",
                 status_code=status,
                 response=e.response,
             )
 
         except requests.exceptions.ConnectionError:
-            logger.error(f"[{self.SOURCE_NAME}] Connection failed for URL: {url}")
+            cleaned_url = url.split("?")[0]
+            logger.error(
+                f"[{self.SOURCE_NAME}] Connection failed for URL: {cleaned_url}"
+            )
             raise ApiConnectionError(f"Could not connect to {self.SOURCE_NAME} API")
 
         except requests.exceptions.RequestException as e:
-            logger.error(f"[{self.SOURCE_NAME}] Request error: {e}")
-            raise ApiError(f"{self.SOURCE_NAME} API error: {e}")
+            raw_err_msg = str(e)
+            cleaned_msg = sanitize_error_message(raw_err_msg)
+            logger.error(f"[{self.SOURCE_NAME}] Request error: {cleaned_msg}")
+            raise ApiError(f"{self.SOURCE_NAME} API error: {cleaned_msg}")
 
     @abstractmethod
     def search_by_mpn(self, mpn: str) -> Optional[PartData]:

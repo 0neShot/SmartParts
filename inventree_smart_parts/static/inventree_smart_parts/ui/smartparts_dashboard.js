@@ -15,7 +15,7 @@ export function renderSmartPartsDashboard(target, context) {
                 <strong style="font-size:1rem;">Smart Parts Lookup</strong>
             </div>
             <p style="color:#6b7280;font-size:.85rem;margin:0 0 12px;">
-                Search parts across Mouser, DigiKey &amp; LCSC
+                Search parts across Mouser, DigiKey, LCSC, element14 &amp; TME
             </p>
             <div style="display:flex;gap:8px;">
                 <input 

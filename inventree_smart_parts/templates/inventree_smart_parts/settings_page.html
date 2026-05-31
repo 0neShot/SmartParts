@@ -144,6 +144,14 @@
         background: linear-gradient(135deg, #0066cc, #3399ff)
     }
 
+    .sp-provider-icon.element14 {
+        background: linear-gradient(135deg, #e30613, #ff6b6b)
+    }
+
+    .sp-provider-icon.tme {
+        background: linear-gradient(135deg, #1a5276, #2980b9)
+    }
+
     .sp-provider-name {
         font-weight: 600;
         font-size: 1rem
@@ -283,6 +291,48 @@
                 Test</button>
         </div>
         <div class="sp-test-result" id="test-lcsc"></div>
+
+        <div class="sp-provider">
+            <div class="sp-provider-info">
+                <div class="sp-provider-icon element14">F</div>
+                <div>
+                    <div class="sp-provider-name">element14 / Farnell / Newark</div>
+                    <div class="sp-provider-status">
+                        {% if element14_enabled %}
+                        <span style="color:var(--sp-success)">&#9679; Enabled</span>
+                        {% if element14_has_key %} &ndash; Key configured &ndash; {{ element14_store }}{% else %} &ndash; <span
+                            style="color:var(--sp-warning)">No API key</span>{% endif %}
+                        {% else %}
+                        <span style="color:var(--sp-text-muted)">&#9679; Disabled</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <button class="sp-btn sp-btn-outline" onclick="testApi('element14', this)"><i class="fas fa-bolt"></i>
+                Test</button>
+        </div>
+        <div class="sp-test-result" id="test-element14"></div>
+
+        <div class="sp-provider">
+            <div class="sp-provider-info">
+                <div class="sp-provider-icon tme">T</div>
+                <div>
+                    <div class="sp-provider-name">TME (Transfer Multisort Elektronik)</div>
+                    <div class="sp-provider-status">
+                        {% if tme_enabled %}
+                        <span style="color:var(--sp-success)">&#9679; Enabled</span>
+                        {% if tme_has_token %} &ndash; Token configured &ndash; {{ tme_country }} / {{ tme_currency }}{% else %} &ndash; <span
+                            style="color:var(--sp-warning)">No API token</span>{% endif %}
+                        {% else %}
+                        <span style="color:var(--sp-text-muted)">&#9679; Disabled</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <button class="sp-btn sp-btn-outline" onclick="testApi('tme', this)"><i class="fas fa-bolt"></i>
+                Test</button>
+        </div>
+        <div class="sp-test-result" id="test-tme"></div>
     </div>
 
     <!-- Learned Category Mappings -->

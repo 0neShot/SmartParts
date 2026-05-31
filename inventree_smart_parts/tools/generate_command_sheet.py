@@ -49,7 +49,7 @@ def generate_qr_svg(text: str, box_size: int = 4) -> str:
     """Generate an inline SVG QR code for the given text."""
     try:
         import qrcode
-        import qrcode.image.svg
+        from qrcode.image.svg import SvgPathImage
 
         qr = qrcode.QRCode(
             version=1,
@@ -59,8 +59,7 @@ def generate_qr_svg(text: str, box_size: int = 4) -> str:
         )
         qr.add_data(text)
         qr.make(fit=True)
-        factory = qrcode.image.svg.SvgPathImage
-        img = qr.make_image(image_factory=factory)
+        img = qr.make_image(image_factory=SvgPathImage)
         svg_bytes = img.to_string()
         return svg_bytes.decode("utf-8")
     except ImportError:

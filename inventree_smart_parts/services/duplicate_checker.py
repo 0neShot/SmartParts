@@ -6,7 +6,7 @@ Returns existing part info with options to update or skip.
 """
 
 import logging
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, List
 from dataclasses import dataclass
 
 logger = logging.getLogger("inventree_smart_parts.services.duplicates")
@@ -46,7 +46,6 @@ def check_duplicate(mpn: str, manufacturer: str = "") -> DuplicateResult:
 
     try:
         from company.models import ManufacturerPart
-        from part.models import Part
 
         mpn_clean = mpn.strip()
 
