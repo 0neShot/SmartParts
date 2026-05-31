@@ -23,7 +23,7 @@ export function renderSmartPartsPanel(target, context) {
                     <span style="font-size:1.5rem;">⚡</span>
                     <div>
                         <strong style="font-size:1.1rem;">Smart Parts Lookup</strong>
-                        <div style="font-size:.8rem;color:#6b7280;">Search Mouser, DigiKey &amp; LCSC</div>
+                        <div style="font-size:.8rem;color:#6b7280;">Search Mouser, DigiKey, LCSC, element14 &amp; TME</div>
                     </div>
                 </div>
                 <a href="${FULL_PAGE}" target="_blank" 
@@ -129,7 +129,7 @@ export function renderSmartPartsPanel(target, context) {
 
         const m = data.merged;
         let sourceBadges = '';
-        ['mouser','digikey','lcsc'].forEach(s => {
+        ['mouser','digikey','lcsc','element14','tme'].forEach(s => {
             if (data.sources && data.sources[s] && !data.sources[s].error) {
                 sourceBadges += '<span style="padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:600;background:#eff6ff;color:#2563eb;margin-right:4px;">' + s + ' ✓</span>';
             }

@@ -11,7 +11,7 @@ Called as Phase 2+3 of the BOM Assembly Generation workflow:
 
 import logging
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 logger = logging.getLogger("inventree_smart_parts.assembly")
 

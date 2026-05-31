@@ -33,8 +33,8 @@ class SmartPartsPlugin(UserInterfaceMixin, SettingsMixin, UrlsMixin, InvenTreePl
     TITLE = "Smart Parts – Inventory Assistant"
     DESCRIPTION = (
         "Automates part creation from MPN lookup. "
-        "Fetches data from Mouser, DigiKey & LCSC, maps categories, "
-        "detects duplicates, and supports batch Excel import."
+        "Fetches data from Mouser, DigiKey, LCSC, element14/Farnell, and TME. "
+        "Maps categories, detects duplicates, and supports batch Excel import."
     )
     VERSION = "1.0.1"
     AUTHOR = "StarkStrom Engineering"
@@ -77,14 +77,74 @@ class SmartPartsPlugin(UserInterfaceMixin, SettingsMixin, UrlsMixin, InvenTreePl
             "default": True,
             "validator": bool,
         },
+        # ── element14 / Farnell / Newark ──
+        "ELEMENT14_API_KEY": {
+            "name": "element14 API Key",
+            "description": (
+                "API key for the element14 Product Search REST API. "
+                "Covers Farnell (EU), Newark (US), and element14 (Asia-Pacific). "
+                "Register at https://partner.element14.com/"
+            ),
+            "default": "",
+        },
+        "ELEMENT14_STORE": {
+            "name": "element14 Store / Storefront",
+            "description": (
+                "Regional storefront to query. Examples: "
+                "uk.farnell.com  de.farnell.com  fr.farnell.com  "
+                "www.newark.com  au.element14.com  sg.element14.com  in.element14.com"
+            ),
+            "default": "uk.farnell.com",
+        },
+        "ELEMENT14_ENABLED": {
+            "name": "Enable element14 / Farnell",
+            "description": "Enable or disable element14/Farnell as a data source",
+            "default": False,
+            "validator": bool,
+        },
+        # ── TME ──
+        "TME_API_TOKEN": {
+            "name": "TME API Token",
+            "description": (
+                "Public API token for the TME REST API (HMAC-SHA1 signed). "
+                "Obtain from https://developers.tme.eu/"
+            ),
+            "default": "",
+        },
+        "TME_API_SECRET": {
+            "name": "TME API Secret",
+            "description": ("Secret API key used to sign TME requests"),
+            "default": "",
+        },
+        "TME_COUNTRY": {
+            "name": "TME Country Code",
+            "description": (
+                "ISO 3166-1 alpha-2 country code for TME pricing and stock. "
+                "Examples: DE  PL  GB  US  FR  NL"
+            ),
+            "default": "DE",
+        },
+        "TME_CURRENCY": {
+            "name": "TME Currency",
+            "description": "Currency for TME price breaks (e.g. EUR, USD, GBP, PLN)",
+            "default": "EUR",
+        },
+        "TME_ENABLED": {
+            "name": "Enable TME",
+            "description": "Enable or disable TME as a data source",
+            "default": False,
+            "validator": bool,
+        },
         # ── Data Merging ──
         "API_PRIORITY": {
             "name": "API Priority Order",
             "description": (
                 "Comma-separated priority order for data merging. "
-                "First source wins for each field. Example: mouser,digikey,lcsc"
+                "First source wins for each field. "
+                "Valid tokens: mouser, digikey, lcsc, element14, tme. "
+                "Example: mouser,digikey,element14,tme,lcsc"
             ),
-            "default": "mouser,digikey,lcsc",
+            "default": "mouser,digikey,element14,tme,lcsc",
         },
         # ── Category Mapping ──
         "FUZZY_THRESHOLD": {
@@ -121,6 +181,22 @@ class SmartPartsPlugin(UserInterfaceMixin, SettingsMixin, UrlsMixin, InvenTreePl
                 "category path you chose. Acts as a 100%% confidence override – edit or delete "
                 "entries here to fix incorrect learning. "
                 'Example: {"Semiconductors > Voltage Regulators": "Power > LDO Regulators"}'
+            ),
+            "default": "{}",
+        },
+        "LEARNED_PARAMETER_MAPPINGS": {
+            "name": "Learned Parameter Mappings (JSON)",
+            "description": (
+                "JSON dictionary mapping raw distributor parameter names to canonical names. "
+                'Example: {"ic mounting": "Mounting Type", "capacitance - value": "Capacitance"}'
+            ),
+            "default": "{}",
+        },
+        "TRACKED_UNKNOWN_PARAMETERS": {
+            "name": "Tracked Unknown Parameters (JSON)",
+            "description": (
+                "Automatically populated with unknown parameter names and their frequency counts. "
+                "Map these in Learned Parameter Mappings to standardize them."
             ),
             "default": "{}",
         },
@@ -198,7 +274,7 @@ class SmartPartsPlugin(UserInterfaceMixin, SettingsMixin, UrlsMixin, InvenTreePl
             {
                 "key": "smartparts-dashboard-widget",
                 "title": "Smart Parts",
-                "description": "Quick MPN search across Mouser, DigiKey & LCSC",
+                "description": "Quick MPN search across Mouser, DigiKey, LCSC, Farnell & TME",
                 "icon": "ti:cpu",
                 "source": f"{self.STATIC_URL_BASE}/smartparts_dashboard.js:renderSmartPartsDashboard",
                 "options": {
@@ -230,6 +306,7 @@ class SmartPartsPlugin(UserInterfaceMixin, SettingsMixin, UrlsMixin, InvenTreePl
             path("batch/report/<str:job_id>/", views.batch_report, name="batch-report"),
             # Settings & Admin
             path("settings/", views.plugin_settings, name="settings"),
+            path("parameters/", views.parameter_dashboard, name="parameter-dashboard"),
             path(
                 "api/test-connection/<str:provider>/",
                 views.test_connection,
@@ -242,6 +319,21 @@ class SmartPartsPlugin(UserInterfaceMixin, SettingsMixin, UrlsMixin, InvenTreePl
             # Plugin-level settings helpers
             path("api/settings/synonyms/", views.api_synonyms, name="api-synonyms"),
             path("api/settings/learned/", views.api_learned, name="api-learned"),
+            path(
+                "api/settings/parameters/",
+                views.api_parameter_mappings,
+                name="api-parameter-mappings",
+            ),
+            path(
+                "api/settings/unknown-parameters/",
+                views.api_unknown_parameters,
+                name="api-unknown-parameters",
+            ),
+            path(
+                "api/settings/canonical-parameters/",
+                views.api_canonical_parameters,
+                name="api-canonical-parameters",
+            ),
             # Stock & Label APIs
             path(
                 "api/stock/locations/",

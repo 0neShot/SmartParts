@@ -342,19 +342,23 @@ class DigiKeyClient(BaseApiClient):
             self._authenticate()
             return {
                 "success": True,
-                "message": "OAuth2 authentication successful. Connection OK.",
+                "message": "Connected successfully. OAuth2 authentication OK.",
                 "details": {
                     "token_expires_in": int(self._token_expiry - time.time()),
                 },
             }
 
         except ApiAuthError as e:
+            from .base import sanitize_error_message
+
             return {
                 "success": False,
-                "message": f"Authentication failed: {str(e)}",
+                "message": f"Authentication failed: {sanitize_error_message(str(e))}",
             }
         except Exception as e:
+            from .base import sanitize_error_message
+
             return {
                 "success": False,
-                "message": f"Unexpected error: {str(e)}",
+                "message": f"Unexpected error: {sanitize_error_message(str(e))}",
             }

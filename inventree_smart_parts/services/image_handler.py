@@ -13,9 +13,7 @@ Features:
 - Automatic format detection
 """
 
-import io
 import os
-import time
 import logging
 import tempfile
 from typing import Optional, List, Dict, Tuple

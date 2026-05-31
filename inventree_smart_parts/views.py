@@ -76,6 +76,10 @@ def dashboard(request):
         "mouser_enabled": plugin.get_setting("MOUSER_ENABLED") if plugin else False,
         "digikey_enabled": plugin.get_setting("DIGIKEY_ENABLED") if plugin else False,
         "lcsc_enabled": plugin.get_setting("LCSC_ENABLED") if plugin else False,
+        "element14_enabled": (
+            plugin.get_setting("ELEMENT14_ENABLED") if plugin else False
+        ),
+        "tme_enabled": plugin.get_setting("TME_ENABLED") if plugin else False,
     }
     return render(request, "inventree_smart_parts/dashboard.html", context)
 
@@ -351,8 +355,50 @@ def api_search(request):
             results["lcsc"] = {"error": str(e)}
             logger.warning(f"LCSC search error: {e}")
 
+    # element14 / Farnell
+    if plugin.get_setting("ELEMENT14_ENABLED"):
+        try:
+            from .api_clients import Element14Client
+
+            client = Element14Client(
+                api_key=plugin.get_setting("ELEMENT14_API_KEY"),
+                store_name=plugin.get_setting("ELEMENT14_STORE") or "uk.farnell.com",
+            )
+            r = client.search_by_mpn(mpn)
+            if r:
+                api_results.append(r)
+                results["element14"] = _part_data_to_dict(r)
+            else:
+                results["element14"] = None
+        except Exception as e:
+            results["element14"] = {"error": str(e)}
+            logger.warning(f"element14 search error: {e}")
+
+    # TME
+    if plugin.get_setting("TME_ENABLED"):
+        try:
+            from .api_clients import TMEClient
+
+            client = TMEClient(
+                token=plugin.get_setting("TME_API_TOKEN"),
+                secret=plugin.get_setting("TME_API_SECRET"),
+                country=plugin.get_setting("TME_COUNTRY") or "DE",
+                currency=plugin.get_setting("TME_CURRENCY") or "EUR",
+            )
+            r = client.search_by_mpn(mpn)
+            if r:
+                api_results.append(r)
+                results["tme"] = _part_data_to_dict(r)
+            else:
+                results["tme"] = None
+        except Exception as e:
+            results["tme"] = {"error": str(e)}
+            logger.warning(f"TME search error: {e}")
+
     # Merge
-    priority_str = plugin.get_setting("API_PRIORITY") or "mouser,digikey,lcsc"
+    priority_str = (
+        plugin.get_setting("API_PRIORITY") or "mouser,digikey,element14,tme,lcsc"
+    )
     priority_order = [p.strip() for p in priority_str.split(",") if p.strip()]
     merged = merge_part_data(api_results, priority_order)
 
@@ -458,7 +504,7 @@ def create_part(request):
     if not plugin:
         return JsonResponse({"error": "Plugin not loaded"}, status=500)
 
-    from .api_clients.base import PartData, PriceBreak, PartParameter
+    from .api_clients.base import PartData, PartParameter
     from .services.part_creator import create_part_from_data
 
     # Reconstruct PartData from the request
@@ -898,6 +944,23 @@ def plugin_settings(request):
             bool(plugin.get_setting("DIGIKEY_CLIENT_ID")) if plugin else False
         ),
         "lcsc_enabled": plugin.get_setting("LCSC_ENABLED") if plugin else False,
+        "element14_enabled": (
+            plugin.get_setting("ELEMENT14_ENABLED") if plugin else False
+        ),
+        "element14_has_key": (
+            bool(plugin.get_setting("ELEMENT14_API_KEY")) if plugin else False
+        ),
+        "element14_store": (
+            plugin.get_setting("ELEMENT14_STORE") or "uk.farnell.com"
+            if plugin
+            else "uk.farnell.com"
+        ),
+        "tme_enabled": plugin.get_setting("TME_ENABLED") if plugin else False,
+        "tme_has_token": bool(plugin.get_setting("TME_API_TOKEN")) if plugin else False,
+        "tme_country": plugin.get_setting("TME_COUNTRY") or "DE" if plugin else "DE",
+        "tme_currency": (
+            plugin.get_setting("TME_CURRENCY") or "EUR" if plugin else "EUR"
+        ),
     }
     return render(request, "inventree_smart_parts/settings_page.html", context)
 
@@ -909,7 +972,13 @@ def test_connection(request, provider: str):
     if not plugin:
         return JsonResponse({"error": "Plugin not loaded"}, status=500)
 
-    from .api_clients import MouserClient, DigiKeyClient, LCSCClient
+    from .api_clients import (
+        MouserClient,
+        DigiKeyClient,
+        LCSCClient,
+        Element14Client,
+        TMEClient,
+    )
 
     if provider == "mouser":
         client = MouserClient(api_key=plugin.get_setting("MOUSER_API_KEY"))
@@ -920,6 +989,18 @@ def test_connection(request, provider: str):
         )
     elif provider == "lcsc":
         client = LCSCClient()
+    elif provider == "element14":
+        client = Element14Client(
+            api_key=plugin.get_setting("ELEMENT14_API_KEY"),
+            store_name=plugin.get_setting("ELEMENT14_STORE") or "uk.farnell.com",
+        )
+    elif provider == "tme":
+        client = TMEClient(
+            token=plugin.get_setting("TME_API_TOKEN"),
+            secret=plugin.get_setting("TME_API_SECRET"),
+            country=plugin.get_setting("TME_COUNTRY") or "DE",
+            currency=plugin.get_setting("TME_CURRENCY") or "EUR",
+        )
     else:
         return JsonResponse({"error": f"Unknown provider: {provider}"}, status=400)
 
@@ -1097,6 +1178,119 @@ def api_learned(request):
             return JsonResponse({"error": str(e)}, status=500)
 
     return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+@csrf_exempt
+def api_parameter_mappings(request):
+    """
+    GET  → return current LEARNED_PARAMETER_MAPPINGS plugin setting as JSON
+    POST → validate & save a new LEARNED_PARAMETER_MAPPINGS value
+    """
+    import json as _json
+
+    plugin = _get_plugin()
+    if not plugin:
+        return JsonResponse({"error": "Plugin not loaded"}, status=500)
+
+    if request.method == "GET":
+        value = plugin.get_setting("LEARNED_PARAMETER_MAPPINGS") or "{}"
+        return JsonResponse({"value": value})
+
+    if request.method == "POST":
+        denied = _check_perm(request, "part.change_part")
+        if denied:
+            return denied
+        try:
+            body = _json.loads(request.body)
+            raw = body.get("value", "{}")
+            # Validate it's a JSON object
+            parsed = _json.loads(raw)
+            if not isinstance(parsed, dict):
+                raise ValueError("Expected a JSON object")
+        except (ValueError, _json.JSONDecodeError, TypeError) as e:
+            return JsonResponse({"error": f"Invalid JSON: {e}"}, status=400)
+
+        try:
+            plugin.set_setting("LEARNED_PARAMETER_MAPPINGS", raw)
+            return JsonResponse({"success": True, "value": raw})
+        except Exception as e:
+            logger.error(
+                f"Failed to save LEARNED_PARAMETER_MAPPINGS: {e}", exc_info=True
+            )
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+@csrf_exempt
+def api_unknown_parameters(request):
+    """
+    GET  → return current TRACKED_UNKNOWN_PARAMETERS plugin setting as JSON
+    POST → validate & save a new TRACKED_UNKNOWN_PARAMETERS value
+    """
+    import json as _json
+
+    plugin = _get_plugin()
+    if not plugin:
+        return JsonResponse({"error": "Plugin not loaded"}, status=500)
+
+    if request.method == "GET":
+        value = plugin.get_setting("TRACKED_UNKNOWN_PARAMETERS") or "{}"
+        return JsonResponse({"value": value})
+
+    if request.method == "POST":
+        denied = _check_perm(request, "part.change_part")
+        if denied:
+            return denied
+        try:
+            body = _json.loads(request.body)
+            raw = body.get("value", "{}")
+            # Validate it's a JSON object
+            parsed = _json.loads(raw)
+            if not isinstance(parsed, dict):
+                raise ValueError("Expected a JSON object")
+        except (ValueError, _json.JSONDecodeError, TypeError) as e:
+            return JsonResponse({"error": f"Invalid JSON: {e}"}, status=400)
+
+        try:
+            plugin.set_setting("TRACKED_UNKNOWN_PARAMETERS", raw)
+            return JsonResponse({"success": True, "value": raw})
+        except Exception as e:
+            logger.error(
+                f"Failed to save TRACKED_UNKNOWN_PARAMETERS: {e}", exc_info=True
+            )
+            return JsonResponse({"error": str(e)}, status=500)
+
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
+
+def parameter_dashboard(request):
+    """View to display the Parameter Normalization Dashboard."""
+    plugin = _get_plugin()
+    context = {
+        "plugin": plugin,
+    }
+    return render(request, "inventree_smart_parts/parameter_dashboard.html", context)
+
+
+def api_canonical_parameters(request):
+    """Return a list of all existing canonical parameter names from DB and built-in map."""
+    from common.models import ParameterTemplate
+    from .services.parameter_normalizer import PARAMETER_MAP
+
+    # Get database parameter templates
+    try:
+        db_names = list(ParameterTemplate.objects.all().values_list("name", flat=True))
+    except Exception:
+        db_names = []
+
+    # Get built-in canonical names
+    builtin_names = list(set(PARAMETER_MAP.values()))
+
+    # Merge and deduplicate
+    all_names = sorted(list(set(db_names + builtin_names)))
+
+    return JsonResponse({"names": all_names})
 
 
 # ═══════════════════════════════════════════════════════════════════

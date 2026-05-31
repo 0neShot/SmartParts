@@ -1,0 +1,621 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block page_title %}{% trans "Parameter Normalization Dashboard" %} | Smart Parts{% endblock %}
+
+{% block content %}
+<style>
+    :root {
+        --sp-primary: #6366f1;
+        --sp-primary-hover: #4f46e5;
+        --sp-success: #10b981;
+        --sp-warning: #f59e0b;
+        --sp-danger: #ef4444;
+        --sp-info: #3b82f6;
+        --sp-border: #e5e7eb;
+        --sp-text-muted: #6b7280;
+        --sp-gradient: linear-gradient(135deg, #6366f1, #8b5cf6, #a78bfa);
+        --sp-shadow: 0 4px 6px -1px rgba(0, 0, 0, .1);
+        --sp-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, .1);
+        --sp-bg-card: #ffffff;
+    }
+
+    .sp-wrap {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1.5rem;
+    }
+
+    .sp-header {
+        background: var(--sp-gradient);
+        border-radius: 16px;
+        padding: 2rem 2.5rem;
+        margin-bottom: 2rem;
+        color: #fff;
+        box-shadow: var(--sp-shadow-lg);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .sp-header h1 {
+        font-size: 1.75rem;
+        font-weight: 700;
+        margin: 0 0 .25rem;
+    }
+
+    .sp-header p {
+        margin: 0;
+        opacity: .85;
+        font-size: .95rem;
+    }
+
+    .sp-card {
+        background: var(--sp-bg-card);
+        border: 1px solid var(--sp-border);
+        border-radius: 12px;
+        box-shadow: var(--sp-shadow);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .sp-card h3 {
+        font-size: 1.15rem;
+        font-weight: 600;
+        margin: 0 0 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+        color: #1e293b;
+    }
+
+    .sp-info-box {
+        background: rgba(59, 130, 246, .06);
+        border: 1px solid rgba(59, 130, 246, .15);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        font-size: .88rem;
+        color: #1e40af;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: start;
+        gap: .75rem;
+        line-height: 1.45;
+    }
+
+    .sp-info-box i {
+        margin-top: 0.15rem;
+        font-size: 1.1rem;
+    }
+
+    /* Buttons */
+    .sp-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        padding: .55rem 1.1rem;
+        border: none;
+        border-radius: 8px;
+        font-size: .875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all .2s;
+        text-decoration: none;
+    }
+
+    .sp-btn-primary {
+        background: var(--sp-primary);
+        color: #fff;
+    }
+
+    .sp-btn-primary:hover {
+        background: var(--sp-primary-hover);
+        transform: translateY(-1px);
+    }
+
+    .sp-btn-outline {
+        background: transparent;
+        color: var(--sp-primary);
+        border: 2px solid var(--sp-primary);
+    }
+
+    .sp-btn-outline:hover {
+        background: var(--sp-primary);
+        color: #fff;
+    }
+
+    .sp-btn-danger-ghost {
+        background: rgba(239, 68, 68, .08);
+        color: var(--sp-danger);
+        border: 1px solid rgba(239, 68, 68, .2);
+        padding: .35rem .6rem;
+        border-radius: 6px;
+        font-size: .82rem;
+        cursor: pointer;
+        transition: all .15s;
+    }
+
+    .sp-btn-danger-ghost:hover {
+        background: rgba(239, 68, 68, .18);
+        border-color: var(--sp-danger);
+    }
+
+    .sp-btn-sm {
+        padding: .35rem .75rem;
+        font-size: .8rem;
+        border-radius: 6px;
+    }
+
+    /* Grid & Forms */
+    .sp-input {
+        padding: .45rem .7rem;
+        border: 1.5px solid var(--sp-border);
+        border-radius: 7px;
+        font-size: .875rem;
+        outline: none;
+        transition: border-color .15s, box-shadow .15s;
+        box-sizing: border-box;
+        background: #fff;
+    }
+
+    .sp-input:focus {
+        border-color: var(--sp-primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, .12);
+    }
+
+    /* Badge */
+    .sp-badge {
+        padding: .15rem .5rem;
+        border-radius: 4px;
+        font-size: .75rem;
+        font-weight: 700;
+    }
+
+    .sp-badge-warn {
+        background: rgba(245, 158, 11, .15);
+        color: #b45309;
+    }
+
+    .sp-badge-info {
+        background: rgba(59, 130, 246, .1);
+        color: var(--sp-info);
+    }
+
+    .sp-badge-danger {
+        background: rgba(239, 68, 68, .1);
+        color: var(--sp-danger);
+    }
+
+    /* Table styles */
+    .sp-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .875rem;
+        margin-top: .5rem;
+    }
+
+    .sp-table th {
+        text-align: left;
+        padding: .65rem .75rem;
+        font-size: .75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        color: var(--sp-text-muted);
+        border-bottom: 2px solid var(--sp-border);
+    }
+
+    .sp-table td {
+        padding: .5rem .75rem;
+        border-bottom: 1px solid #f3f4f6;
+        vertical-align: middle;
+    }
+
+    .sp-row:hover {
+        background: #fafafa;
+    }
+</style>
+
+<!-- Canonical Autocomplete Dataset -->
+<datalist id="canonicalNames"></datalist>
+
+<div class="sp-wrap">
+    <!-- Header -->
+    <div class="sp-header">
+        <div>
+            <h1><i class="fas fa-brain"></i> Parameter Normalization Dashboard</h1>
+            <p>Define standard overrides and ignore rules to ensure clean, structured components in InvenTree.</p>
+        </div>
+        <div>
+            <a href="../" class="sp-btn" style="background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">
+                <i class="fas fa-arrow-left"></i> Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Permanent Ignore Alert Callout -->
+    <div class="sp-info-box">
+        <i class="fas fa-exclamation-triangle" style="color:var(--sp-warning)"></i>
+        <div>
+            <strong>Permanent Ignore Heuristics:</strong><br>
+            Clicking "Ignore" is permanent. The parameter will be hidden from this list and silently dropped during all future API imports.
+        </div>
+    </div>
+
+    <!-- Section 1: Pending Parameters -->
+    <div class="sp-card">
+        <h3><i class="fas fa-eye" style="color:var(--sp-warning)"></i> Pending Parameters (Caught from search)</h3>
+        <p style="font-size:.85rem;color:var(--sp-text-muted);margin:0 0 1.25rem">
+            Parameters retrieved from supplier APIs that are currently unmapped. Map them to a standard database Template or permanently ignore them.
+        </p>
+
+        <div id="unknownParamsEmpty"
+            style="font-size:.85rem;color:var(--sp-text-muted);padding:1rem;border:1px dashed var(--sp-border);border-radius:8px;text-align:center">
+            <i class="fas fa-check-circle" style="color:var(--sp-success)"></i> Excellent! No unknown parameters currently tracked.
+        </div>
+
+        <div id="unknownParamsRows" style="display:flex;flex-direction:column;gap:.65rem"></div>
+    </div>
+
+    <!-- Section 2: Active Mappings -->
+    <div class="sp-card">
+        <h3><i class="fas fa-sliders-h" style="color:var(--sp-primary)"></i> Active Parameter Mappings & Rules</h3>
+        <p style="font-size:.85rem;color:var(--sp-text-muted);margin:0 0 1.25rem">
+            Manage your persistent normalization dictionary. Clean, lowercase string matching handles spelling variations.
+        </p>
+
+        <div id="paramMappingsEmpty"
+            style="font-size:.85rem;color:var(--sp-text-muted);display:none;padding:1rem;border:1px dashed var(--sp-border);border-radius:8px;text-align:center;margin-bottom:1rem">
+            <i class="fas fa-info-circle"></i> No custom parameter mappings defined yet.
+        </div>
+
+        <div id="paramMappingsRows" style="display:flex;flex-direction:column;gap:.65rem;margin-bottom:1.25rem"></div>
+
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:1rem">
+            <button class="sp-btn sp-btn-outline" onclick="addParamMappingRow('','',false)">
+                <i class="fas fa-plus"></i> Add Entry
+            </button>
+            <button class="sp-btn sp-btn-primary" id="saveParamMappingsBtn" onclick="saveParamMappings()">
+                <i class="fas fa-save"></i> Save Mappings
+            </button>
+        </div>
+        <div id="paramMappingsStatus" style="font-size:.85rem;display:none;margin-top:0.5rem"></div>
+
+        <details style="margin-top:.75rem">
+            <summary style="font-size:.8rem;cursor:pointer;color:var(--sp-text-muted)">Raw Database JSON View</summary>
+            <textarea id="paramMappingsJson" rows="8"
+                style="width:100%;margin-top:.5rem;padding:.5rem;border:1px solid var(--sp-border);border-radius:6px;font-family:monospace;font-size:.8rem;resize:vertical"
+                oninput="syncParamMappingsJsonToRows()">{}</textarea>
+        </details>
+    </div>
+</div>
+
+<script>
+    function getCookie(n) { let v = document.cookie.match('(^|;)\\s*' + n + '\\s*=\\s*([^;]+)'); return v ? v.pop() : ''; }
+    function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+    let _trackedUnknowns = {};
+    let _canonicalNames = [];
+
+    // -- Autocomplete / Datalist Load --
+    (function loadCanonicalAutocomplete() {
+        fetch('../api/settings/canonical-parameters/', {
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (data && data.names) {
+                    _canonicalNames = data.names;
+                    const datalist = document.getElementById('canonicalNames');
+                    datalist.innerHTML = data.names.map(name => `<option value="${esc(name)}">`).join('');
+                }
+            })
+            .catch(err => console.error('Failed to load canonical autocomplete:', err));
+    })();
+
+    // -- Active Mappings Management --
+
+    function addParamMappingRow(rawParam, canonicalName, isIgnored) {
+        const container = document.getElementById('paramMappingsRows');
+        document.getElementById('paramMappingsEmpty').style.display = 'none';
+        
+        const row = document.createElement('div');
+        row.style.cssText = 'display:grid;grid-template-columns:1fr auto 1.2fr auto auto;gap:.5rem;align-items:center;background:#fff;padding:.35rem .5rem;border:1px solid var(--sp-border);border-radius:8px';
+        
+        // Ignored select block
+        const selectStyle = isIgnored 
+            ? 'background:rgba(239,68,68,0.06);color:var(--sp-danger);border-color:rgba(239,68,68,0.2);font-weight:700' 
+            : 'background:rgba(16,185,129,0.06);color:var(--sp-success);border-color:rgba(16,185,129,0.2);font-weight:700';
+
+        row.innerHTML = `
+        <input type="text" placeholder="Distributor parameter name (exact raw string)" value="${esc(rawParam)}"
+            style="padding:.4rem .6rem;border:1px solid var(--sp-border);border-radius:6px;font-size:.82rem;font-family:monospace"
+            oninput="syncParamMappingsRowsToJson()" ${isIgnored ? 'disabled' : ''}>
+            
+        <span style="color:var(--sp-text-muted);font-size:.85rem;white-space:nowrap">&rarr; Actions:</span>
+        
+        <div style="display:flex;gap:.5rem;width:100%">
+            <input type="text" list="canonicalNames" placeholder="Canonical Value" value="${esc(canonicalName)}"
+                style="padding:.4rem .6rem;border:1px solid var(--sp-border);border-radius:6px;font-size:.85rem;flex:1;${isIgnored ? 'display:none' : ''}"
+                oninput="syncParamMappingsRowsToJson()">
+            
+            <select style="padding:.4rem .6rem;border:1px solid var(--sp-border);border-radius:6px;font-size:.85rem;${selectStyle}"
+                onchange="toggleRowIgnoreState(this)">
+                <option value="map" ${!isIgnored ? 'selected' : ''}>Map to Canonical</option>
+                <option value="ignore" ${isIgnored ? 'selected' : ''}>Ignored (Silently Drop)</option>
+            </select>
+        </div>
+        
+        <span class="sp-badge ${isIgnored ? 'sp-badge-danger' : 'sp-badge-info'}" style="white-space:nowrap">
+            ${isIgnored ? 'DROP' : 'CANONICAL'}
+        </span>
+        
+        <button class="sp-btn-danger-ghost"
+            onclick="this.closest('div').remove();syncParamMappingsRowsToJson();checkParamMappingsEmpty()"
+            title="Remove override rule">
+            <i class="fas fa-trash-alt"></i>
+        </button>`;
+        container.appendChild(row);
+    }
+
+    function toggleRowIgnoreState(select) {
+        const row = select.closest('div').parentNode;
+        const inputs = row.querySelectorAll('input');
+        const badge = row.querySelector('.sp-badge');
+        
+        const isIgnored = select.value === 'ignore';
+        
+        if (isIgnored) {
+            inputs[0].disabled = true;
+            inputs[1].style.display = 'none';
+            select.style.cssText = 'padding:.4rem .6rem;border:1px solid var(--sp-border);border-radius:6px;font-size:.85rem;background:rgba(239,68,68,0.06);color:var(--sp-danger);border-color:rgba(239,68,68,0.2);font-weight:700';
+            badge.className = 'sp-badge sp-badge-danger';
+            badge.textContent = 'DROP';
+        } else {
+            inputs[0].disabled = false;
+            inputs[1].style.display = '';
+            select.style.cssText = 'padding:.4rem .6rem;border:1px solid var(--sp-border);border-radius:6px;font-size:.85rem;background:rgba(16,185,129,0.06);color:var(--sp-success);border-color:rgba(16,185,129,0.2);font-weight:700';
+            badge.className = 'sp-badge sp-badge-info';
+            badge.textContent = 'CANONICAL';
+        }
+        
+        syncParamMappingsRowsToJson();
+    }
+
+    function checkParamMappingsEmpty() {
+        const rows = document.querySelectorAll('#paramMappingsRows > div');
+        document.getElementById('paramMappingsEmpty').style.display = rows.length === 0 ? 'block' : 'none';
+    }
+
+    function syncParamMappingsRowsToJson() {
+        const rows = document.querySelectorAll('#paramMappingsRows > div');
+        const obj = {};
+        rows.forEach(row => {
+            const inputs = row.querySelectorAll('input');
+            const select = row.querySelector('select');
+            
+            // Re-fetch raw_name since it might be disabled
+            const rawName = inputs[0]?.value.trim();
+            const canonicalName = inputs[1]?.value.trim();
+            const isIgnored = select.value === 'ignore';
+            
+            if (rawName) {
+                if (isIgnored) {
+                    obj[rawName] = { canonical_name: '', is_ignored: true };
+                } else {
+                    obj[rawName] = { canonical_name: canonicalName || '', is_ignored: false };
+                }
+            }
+        });
+        document.getElementById('paramMappingsJson').value = JSON.stringify(obj, null, 2);
+    }
+
+    function syncParamMappingsJsonToRows() {
+        const raw = document.getElementById('paramMappingsJson').value;
+        try {
+            const obj = JSON.parse(raw);
+            const container = document.getElementById('paramMappingsRows');
+            container.innerHTML = '';
+            Object.entries(obj).forEach(([k, v]) => {
+                if (typeof v === 'object' && v !== null) {
+                    addParamMappingRow(k, v.canonical_name || '', !!v.is_ignored);
+                } else {
+                    addParamMappingRow(k, String(v || ''), false);
+                }
+            });
+            checkParamMappingsEmpty();
+        } catch (e) { /* invalid JSON */ }
+    }
+
+    function saveParamMappings(callback) {
+        syncParamMappingsRowsToJson();
+        const json = document.getElementById('paramMappingsJson').value;
+        try { JSON.parse(json); } catch (e) {
+            showParamMappingsStatus('error', 'Invalid JSON structure: ' + e.message);
+            return;
+        }
+        const btn = document.getElementById('saveParamMappingsBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving to database...';
+
+        fetch('../api/settings/parameters/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({ value: json }),
+        })
+            .then(r => r.ok ? r.json() : r.json().then(d => Promise.reject(d.error || 'HTTP ' + r.status)))
+            .then(() => {
+                showParamMappingsStatus('success', '<i class="fas fa-check-circle"></i> Normalization mappings saved successfully');
+                if (typeof callback === 'function') callback();
+            })
+            .catch(err => {
+                showParamMappingsStatus('error', '<i class="fas fa-times-circle"></i> Save failed: ' + err);
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-save"></i> Save Mappings';
+            });
+    }
+
+    function showParamMappingsStatus(type, html) {
+        const el = document.getElementById('paramMappingsStatus');
+        el.style.display = 'block';
+        el.style.color = type === 'success' ? 'var(--sp-success)' : 'var(--sp-danger)';
+        el.innerHTML = html;
+        setTimeout(() => { el.style.display = 'none'; }, 4000);
+    }
+
+    // -- Caught Pending Parameter Mappings --
+
+    function addUnknownParamRow(name, count) {
+        const container = document.getElementById('unknownParamsRows');
+        document.getElementById('unknownParamsEmpty').style.display = 'none';
+        
+        const row = document.createElement('div');
+        row.style.cssText = 'display:grid;grid-template-columns:1fr auto 1.5fr auto auto;gap:.5rem;align-items:center;background:#f8fafc;padding:.5rem .75rem;border:1px solid var(--sp-border);border-radius:8px';
+        
+        row.innerHTML = `
+        <div style="font-family:monospace;font-size:.82rem;font-weight:600;display:flex;align-items:center;gap:.5rem">
+            <span class="sp-badge sp-badge-warn" style="font-style:normal">${count}x</span>
+            <span>${esc(name)}</span>
+        </div>
+        <span style="color:var(--sp-text-muted);font-size:.85rem">&rarr; Map to:</span>
+        <input type="text" list="canonicalNames" placeholder="Pick or type canonical value..." 
+            style="padding:.35rem .55rem;border:1px solid var(--sp-border);border-radius:6px;font-size:.82rem;flex:1">
+            
+        <button class="sp-btn sp-btn-primary sp-btn-sm" onclick="mapUnknownParam('${esc(name)}', this)" style="padding:.35rem .75rem">
+            <i class="fas fa-check-circle"></i> Save Mapping
+        </button>
+        
+        <button class="sp-btn sp-btn-danger sp-btn-sm" onclick="ignoreUnknownParam('${esc(name)}', this)" style="padding:.35rem .75rem" title="Silently drop during future imports">
+            <i class="fas fa-exclamation-triangle"></i> Ignore
+        </button>`;
+        container.appendChild(row);
+    }
+
+    function mapUnknownParam(name, btn) {
+        const row = btn.closest('div');
+        const canonical = row.querySelector('input').value.trim();
+        if (!canonical) {
+            alert('Please enter or select a Canonical Name to map this parameter to.');
+            return;
+        }
+
+        // Add to active mappings UI as mapped (isIgnored = false)
+        addParamMappingRow(name, canonical, false);
+        
+        // Save the updated mappings
+        saveParamMappings(function() {
+            // Remove from unknowns tracked list
+            delete _trackedUnknowns[name];
+            saveTrackedUnknowns(function() {
+                row.remove();
+                checkUnknownsEmpty();
+            });
+        });
+    }
+
+    function ignoreUnknownParam(name, btn) {
+        if (!confirm(`Ignore "${name}"? Clicking ignore is permanent. The parameter will be hidden and silently dropped during all future API imports.`)) return;
+        const row = btn.closest('div');
+        
+        // Add to active mappings UI as ignored (isIgnored = true)
+        addParamMappingRow(name, '', true);
+        
+        // Save the updated mappings
+        saveParamMappings(function() {
+            // Remove from unknowns tracked list
+            delete _trackedUnknowns[name];
+            saveTrackedUnknowns(function() {
+                row.remove();
+                checkUnknownsEmpty();
+            });
+        });
+    }
+
+    function checkUnknownsEmpty() {
+        const container = document.getElementById('unknownParamsRows');
+        const rows = container.querySelectorAll('div');
+        document.getElementById('unknownParamsEmpty').style.display = rows.length === 0 ? 'block' : 'none';
+    }
+
+    function saveTrackedUnknowns(callback) {
+        fetch('../api/settings/unknown-parameters/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({ value: JSON.stringify(_trackedUnknowns) }),
+        })
+            .then(r => r.ok ? r.json() : Promise.reject('HTTP ' + r.status))
+            .then(() => {
+                if (typeof callback === 'function') callback();
+            })
+            .catch(err => console.error('Failed to update tracked unknowns list:', err));
+    }
+
+    // Load mappings and tracked parameters on page load
+    (function initParameterSettings() {
+        // Load custom mappings
+        fetch('../api/settings/parameters/', {
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data) return;
+                const value = data.value || '{}';
+                document.getElementById('paramMappingsJson').value = value;
+                try {
+                    const obj = JSON.parse(value);
+                    const entries = Object.entries(obj);
+                    if (entries.length === 0) {
+                        document.getElementById('paramMappingsEmpty').style.display = 'block';
+                    } else {
+                        entries.forEach(([k, v]) => {
+                            if (typeof v === 'object' && v !== null) {
+                                addParamMappingRow(k, v.canonical_name || '', !!v.is_ignored);
+                            } else {
+                                addParamMappingRow(k, String(v || ''), false);
+                            }
+                        });
+                    }
+                } catch (e) {
+                    document.getElementById('paramMappingsEmpty').style.display = 'block';
+                }
+            })
+            .catch(() => {
+                document.getElementById('paramMappingsEmpty').style.display = 'block';
+            });
+
+        // Load unknown parameters
+        fetch('../api/settings/unknown-parameters/', {
+            headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        })
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (!data) return;
+                try {
+                    _trackedUnknowns = JSON.parse(data.value || '{}');
+                    const entries = Object.entries(_trackedUnknowns);
+                    if (entries.length === 0) {
+                        document.getElementById('unknownParamsEmpty').style.display = 'block';
+                    } else {
+                        document.getElementById('unknownParamsEmpty').style.display = 'none';
+                        entries.forEach(([k, v]) => addUnknownParamRow(k, v));
+                    }
+                } catch (e) {
+                    document.getElementById('unknownParamsEmpty').style.display = 'block';
+                }
+            })
+            .catch(() => {
+                document.getElementById('unknownParamsEmpty').style.display = 'block';
+            });
+    })();
+</script>
+{% endblock %}

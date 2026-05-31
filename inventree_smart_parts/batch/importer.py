@@ -7,13 +7,12 @@ Errors are collected per row – one failure never aborts the entire batch.
 
 import csv
 import io
-import json
 import logging
 import threading
 import uuid
 from datetime import datetime
 from typing import Dict, List, Any, Optional
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 
 logger = logging.getLogger("inventree_smart_parts.batch")
 

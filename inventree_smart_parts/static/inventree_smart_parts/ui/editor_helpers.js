@@ -120,7 +120,7 @@ function buildInitialSuppliers(searchData, existingData) {
     return `${normName(name)}:${String(sku||'').trim().toLowerCase()}`;
   }
 
-  ['mouser','digikey','lcsc'].forEach(src => {
+  ['mouser','digikey','lcsc','element14','tme'].forEach(src => {
     const s = searchData.sources[src];
     if (!s || s.error) return;
     // Fallback: if API confirmed a match but SKU is empty, use MPN

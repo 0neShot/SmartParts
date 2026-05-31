@@ -247,12 +247,16 @@ class MouserClient(BaseApiClient):
                 }
 
         except ApiError as e:
+            from .base import sanitize_error_message
+
             return {
                 "success": False,
-                "message": f"Connection failed: {str(e)}",
+                "message": f"Connection failed: {sanitize_error_message(str(e))}",
             }
         except Exception as e:
+            from .base import sanitize_error_message
+
             return {
                 "success": False,
-                "message": f"Unexpected error: {str(e)}",
+                "message": f"Unexpected error: {sanitize_error_message(str(e))}",
             }

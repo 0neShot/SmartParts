@@ -7,7 +7,7 @@ First source with a non-empty field wins for that field.
 
 import logging
 from typing import List, Optional
-from ..api_clients.base import PartData, PriceBreak, PartParameter
+from ..api_clients.base import PartData, PartParameter
 
 logger = logging.getLogger("inventree_smart_parts.services.merger")
 
@@ -120,14 +120,53 @@ def merge_part_data(
     return merged
 
 
+import re
+
+_PUNCT_RE = re.compile(r"[-_()\[\]/\\.]")
+_SPACES_RE = re.compile(r"\s+")
+
+
+def sanitize_parameter_name(raw_name: str) -> str:
+    """
+    Sanitize a parameter name by replacing punctuation with a single space,
+    collapsing multiple spaces, and returning the lowercased, stripped result.
+    """
+    if not raw_name:
+        return ""
+    # Replace punctuation with a space
+    s = _PUNCT_RE.sub(" ", raw_name)
+    # Collapse multiple spaces
+    s = _SPACES_RE.sub(" ", s)
+    return s.lower().strip()
+
+
 def _merge_parameters(results: List[PartData]) -> List[PartParameter]:
     """Merge parameters from all sources, deduplicating by name."""
+    from .parameter_normalizer import normalize_parameter_name
+    from plugin.registry import registry
+
+    plugin = None
+    try:
+        plugin = registry.get_plugin("smartparts")
+    except Exception:
+        pass
+
     seen_names = set()
     merged_params = []
 
+    from .parameter_normalizer import is_parameter_ignored
+
     for result in results:
         for param in result.parameters:
-            name_key = param.name.lower().strip()
+            if is_parameter_ignored(param.name, plugin):
+                logger.debug(f"Silently dropping ignored parameter: {param.name}")
+                continue
+
+            sanitized_name = sanitize_parameter_name(param.name)
+            canonical_name = normalize_parameter_name(sanitized_name, plugin)
+            param.name = canonical_name
+
+            name_key = canonical_name.lower().strip()
             if name_key not in seen_names:
                 seen_names.add(name_key)
                 merged_params.append(param)

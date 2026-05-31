@@ -107,7 +107,7 @@ function renderEditor(data, existing) {
 
   /* ── Source badges ────────────────────────────────────────── */
   let srcBadges = '';
-  ['mouser','digikey','lcsc'].forEach(s => {
+  ['mouser','digikey','lcsc','element14','tme'].forEach(s => {
     const src = data.sources[s];
     if (!src) return;
     srcBadges += src.error
@@ -341,7 +341,7 @@ function collectFormData() {
 
   // Per-source image URLs – ordered with most reliable first (digikey works server-side)
   const sourceImageUrls = [];
-  ['digikey', 'lcsc', 'mouser'].forEach(src => {
+  ['digikey', 'lcsc', 'mouser', 'element14', 'tme'].forEach(src => {
     const s = _searchData?.sources?.[src];
     if (s && s.image_url && !s.error) {
       sourceImageUrls.push({ source: src, url: s.image_url });
