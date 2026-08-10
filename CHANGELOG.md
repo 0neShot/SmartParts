@@ -2,6 +2,11 @@
 
 All notable changes to SmartParts are documented in this file.
 
+## [1.1.1] — 2026-08-10
+
+### Fixed
+- **PureScan Barcode Format Support**: Resolved issue where PureScan terminal only accepted JSON format barcodes and rejected InvenTree default shortcode QR codes (`INV-SI722`, `INV-SL5`, `INV-PA42`) and linked barcodes. Updated both backend (`purescan_resolve_barcode`) and frontend JS (`_parseInvenTreeBarcode`) parsers to natively handle shortcode, JSON, key=value, and custom linked barcodes.
+
 ## [1.1.0] — 2026-05-31
 
 ### Added

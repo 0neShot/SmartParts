@@ -82,10 +82,25 @@ PureScan is a full-screen, responsive, 100% keyboard-and-mouse-free interface de
 
 ![Dashboard Overview PureScan](https://raw.githubusercontent.com/wiki/0neShot/SmartParts/images/PureScan-terminal-view.png)
 
-### How to Get Started
-1. Open the **PureScan Terminal** from the InvenTree navigation bar or SmartParts dashboard.
-2. Print the **Command Sheet** (which can be generated dynamically using the built-in standalone QR generator under `purescan/commands/`).
-3. Mount the sheet near your barcode scanner station.
+#### Supported Barcode Formats
+
+PureScan natively resolves **all InvenTree barcode formats** — no specific InvenTree setting is required:
+
+| Format | Example | Source |
+|--------|---------|--------|
+| **JSON (human readable)** | `{"stockitem": 722}` | InvenTree → Settings → Barcodes → *JSON barcodes* |
+| **Shortcode** | `INV-SI722`, `INV-SL5`, `INV-PA42` | InvenTree default QR codes |
+| **Linked / custom barcodes** | Any EAN, QR, or custom string | Assigned via InvenTree barcode API |
+
+> **ℹ️ Tip:** To use JSON barcodes, navigate to **Settings → Barcodes → Internal Barcode Format** and select **"JSON barcodes (human readable)"**. Both shortcode and JSON formats work equally well with PureScan.
+
+#### Getting Started
+
+1. Open PureScan from the SmartParts dashboard
+2. Print the **Command Sheet** (accessible from PureScan or the dashboard)
+3. Place the printed sheet at your warehouse workstation
+
+#### Workflow
 
 ### The Command Workflow
 ```

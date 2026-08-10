@@ -73,9 +73,10 @@
   //  Barcode parsing helpers
   // ═══════════════════════════════════════════════════════════════════════════
 
-  function _parseInvenTreeBarcode(raw) {
+  async function _parseInvenTreeBarcode(raw) {
     const trimmed = raw.trim();
 
+    // Format 1: JSON  {"stockitem": 722}
     if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
       try {
         const obj = JSON.parse(trimmed);
@@ -87,9 +88,34 @@
       } catch (e) { /* not JSON */ }
     }
 
+    // Format 2: INvenTree shortcodes  INV-SI<n> / INV-SL<n> / INV-PA<n>
+    const shortcodeMap = { SI: 'stockitem', SL: 'stocklocation', PA: 'part' };
+    const scMatch = trimmed.match(/^INV-([A-Z]{2})(\d+)$/i);
+    if (scMatch) {
+      const type = shortcodeMap[scMatch[1].toUpperCase()];
+      if (type) return { type, id: parseInt(scMatch[2], 10) };
+    }
+
+    // Format 3: key=value / key:value
     const kvMatch = trimmed.match(/^(stockitem|stocklocation|part)[=:](\d+)$/i);
     if (kvMatch) {
       return { type: kvMatch[1].toLowerCase(), id: parseInt(kvMatch[2], 10) };
+    }
+
+    // Format 4: Fallback to backend API for linked barcodes
+    try {
+      const resp = await fetch(
+        `/plugin/smartparts/api/purescan/resolve/?barcode=${encodeURIComponent(trimmed)}`,
+        { headers: { Accept: 'application/json' } }
+      );
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.type && data.id) {
+          return { type: data.type, id: parseInt(data.id, 10), name: data.name || '' };
+        }
+      }
+    } catch (e) {
+      console.warn('[PureScan] Backend barcode lookup failed:', e);
     }
 
     return { type: null, id: null };
@@ -596,7 +622,7 @@
       }
 
       // Re-scanning the same stock item → add 1 more
-      const bc = _parseInvenTreeBarcode(raw);
+      const bc = await _parseInvenTreeBarcode(raw);
       if (bc.type === 'stockitem' && bc.id === _stockItemId) {
         if (_action !== ACTIONS.STOCKTAKE) {
           _addCombo(1);
@@ -622,7 +648,7 @@
       }
 
       // Quick-scan shortcut: stock item in IDLE → Info
-      const bc = _parseInvenTreeBarcode(raw);
+      const bc = await _parseInvenTreeBarcode(raw);
       if (bc.type === 'stockitem' && bc.id) {
         _action = ACTIONS.INFO;
         _stockItemId = bc.id;
@@ -660,7 +686,7 @@
         return;
       }
 
-      const bc = _parseInvenTreeBarcode(raw);
+      const bc = await _parseInvenTreeBarcode(raw);
 
       // INFO mode also accepts location barcodes
       if (_action === ACTIONS.INFO && bc.type === 'stocklocation' && bc.id) {
@@ -717,7 +743,7 @@
         return;
       }
 
-      const bc = _parseInvenTreeBarcode(raw);
+      const bc = await _parseInvenTreeBarcode(raw);
 
       // TRANSFER: needs a location
       if (_action === ACTIONS.TRANSFER) {

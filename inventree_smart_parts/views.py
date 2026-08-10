@@ -1408,16 +1408,28 @@ def purescan_resolve_barcode(request):
     """GET: Resolve an InvenTree barcode string to its object type and PK.
     Query param: ?barcode=...
     Returns: { type: 'stockitem'|'stocklocation'|'part', id: int, name: str }
+
+    Supported barcode formats
+    -------------------------
+    1. JSON (InvenTree internal, human-readable):
+       {"stockitem": 722}  |  {"stocklocation": 5}  |  {"part": 42}
+    2. INvenTree shortcode (InvenTree default QR format):
+       INV-SI722  (StockItem)  |  INV-SL5  (StockLocation)  |  INV-PA42  (Part)
+    3. Legacy key=value:
+       stockitem=722  |  stocklocation:5  |  part=42
+    4. Linked barcodes (custom / EAN / 2D codes assigned to an object):
+       Falls back to InvenTree's /api/barcode/ handler.
     """
     raw = request.GET.get("barcode", "").strip()
     if not raw:
         return JsonResponse({"error": "barcode parameter required"}, status=400)
 
-    # Try JSON parse
     import json as _json
+    import re
 
     result = {"type": None, "id": None, "name": ""}
 
+    # ── Format 1: JSON ───────────────────────────────────────────────────────
     if raw.startswith("{"):
         try:
             obj = _json.loads(raw)
@@ -1429,21 +1441,73 @@ def purescan_resolve_barcode(request):
         except (ValueError, KeyError):
             pass
 
+    # ── Format 2: INV-SI<n> / INV-SL<n> / INV-PA<n> shortcodes ─────────────
     if not result["type"]:
-        # Try key=value format
-        import re
+        _SHORTCODE_MAP = {
+            "SI": "stockitem",
+            "SL": "stocklocation",
+            "PA": "part",
+        }
+        m = re.match(r"^INV-([A-Z]{2})(\d+)$", raw, re.I)
+        if m:
+            prefix = m.group(1).upper()
+            if prefix in _SHORTCODE_MAP:
+                result["type"] = _SHORTCODE_MAP[prefix]
+                result["id"] = int(m.group(2))
 
+    # ── Format 3: key=value / key:value ─────────────────────────────────────
+    if not result["type"]:
         m = re.match(r"^(stockitem|stocklocation|part)[=:](\d+)$", raw, re.I)
         if m:
             result["type"] = m.group(1).lower()
             result["id"] = int(m.group(2))
+
+    # ── Format 4: Linked / custom barcode → InvenTree Barcode Plugins & DB ───
+    if not result["type"]:
+        try:
+            from plugin.registry import registry
+            from plugin.base.barcodes.helper import get_supported_barcode_models_map
+            from plugin.base.barcodes.api import hash_barcode
+
+            # 1. Ask registered barcode plugins (e.g. InvenTreeInternalBarcodePlugin)
+            for barcode_plugin in registry.with_mixin("barcode"):
+                try:
+                    res = barcode_plugin.scan(raw)
+                    if isinstance(res, dict):
+                        for key in ["stockitem", "stocklocation", "part"]:
+                            if key in res and isinstance(res[key], dict):
+                                result["type"] = key
+                                result["id"] = int(res[key].get("pk", 0))
+                                break
+                except Exception as pe:
+                    logger.debug(f"Barcode plugin scan error ({barcode_plugin}): {pe}")
+                if result["type"]:
+                    break
+
+            # 2. Direct model lookup by barcode_data / barcode_hash fallback
+            if not result["type"]:
+                bch = hash_barcode(raw)
+                models_map = get_supported_barcode_models_map()
+                for key in ["stockitem", "stocklocation", "part"]:
+                    if key in models_map:
+                        model_cls = models_map[key]
+                        item = (
+                            model_cls.objects.filter(barcode_data=raw).first()
+                            or model_cls.objects.filter(barcode_hash=bch).first()
+                        )
+                        if item:
+                            result["type"] = key
+                            result["id"] = item.pk
+                            break
+        except Exception as e:
+            logger.warning(f"PureScan linked barcode lookup failed: {e}")
 
     if not result["type"]:
         return JsonResponse(
             {"error": "Unrecognised barcode format", "raw": raw}, status=400
         )
 
-    # Fetch the name for display
+    # ── Enrich with object name / metadata ──────────────────────────────────
     try:
         if result["type"] == "stockitem":
             from stock.models import StockItem
