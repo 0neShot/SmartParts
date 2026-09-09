@@ -1165,15 +1165,21 @@ def filter_parameters_by_category(
     learned_mappings = {}
     try:
         from plugin.registry import registry
+
         plug = registry.get_plugin("smartparts")
         if plug:
             import json
+
             raw_json = plug.get_setting("LEARNED_PARAMETER_MAPPINGS") or "{}"
             data = json.loads(raw_json)
             if isinstance(data, dict):
                 for k, v in data.items():
                     if k and v is not None:
-                        val = v.get("canonical_name", "") if isinstance(v, dict) else str(v)
+                        val = (
+                            v.get("canonical_name", "")
+                            if isinstance(v, dict)
+                            else str(v)
+                        )
                         if val:
                             learned_mappings[sanitize_parameter_name(k)] = val.strip()
     except Exception:
@@ -1191,7 +1197,9 @@ def filter_parameters_by_category(
     # 1. Direct lowercase: "resistance" -> "Resistance"
     template_by_lower = {name.lower(): name for name in resolved_templates}
     # 2. Sanitized lowercase: "package case" -> "Package / Case"
-    template_by_sanitized = {sanitize_parameter_name(name): name for name in resolved_templates}
+    template_by_sanitized = {
+        sanitize_parameter_name(name): name for name in resolved_templates
+    }
     # 3. Canonical mapping of category templates:
     # E.g. if category template is "Power", and "Power" maps to "Rated Power",
     # then "rated power" -> "Power"
@@ -1238,13 +1246,17 @@ def filter_parameters_by_category(
                 matched_template_name = template_by_lower[canon_lower]
                 match_priority = 3
             elif sanitize_parameter_name(canonical_name) in template_by_sanitized:
-                matched_template_name = template_by_sanitized[sanitize_parameter_name(canonical_name)]
+                matched_template_name = template_by_sanitized[
+                    sanitize_parameter_name(canonical_name)
+                ]
                 match_priority = 3
             elif canon_lower in template_by_canon:
                 matched_template_name = template_by_canon[canon_lower]
                 match_priority = 3
             elif sanitize_parameter_name(canonical_name) in template_by_canon:
-                matched_template_name = template_by_canon[sanitize_parameter_name(canonical_name)]
+                matched_template_name = template_by_canon[
+                    sanitize_parameter_name(canonical_name)
+                ]
                 match_priority = 3
 
         if matched_template_name:
@@ -1252,9 +1264,16 @@ def filter_parameters_by_category(
             param_copy["name"] = matched_template_name
 
             if matched_template_name in accepted_by_template:
-                prev_priority, prev_param, prev_raw, prev_val = accepted_by_template[matched_template_name]
+                prev_priority, prev_param, prev_raw, prev_val = accepted_by_template[
+                    matched_template_name
+                ]
                 if match_priority < prev_priority:
-                    accepted_by_template[matched_template_name] = (match_priority, param_copy, raw_name, value)
+                    accepted_by_template[matched_template_name] = (
+                        match_priority,
+                        param_copy,
+                        raw_name,
+                        value,
+                    )
                     dropped.append(
                         {
                             "supplier_key": prev_raw,
@@ -1271,7 +1290,12 @@ def filter_parameters_by_category(
                         }
                     )
             else:
-                accepted_by_template[matched_template_name] = (match_priority, param_copy, raw_name, value)
+                accepted_by_template[matched_template_name] = (
+                    match_priority,
+                    param_copy,
+                    raw_name,
+                    value,
+                )
         else:
             dropped.append(
                 {

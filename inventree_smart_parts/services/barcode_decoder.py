@@ -18,8 +18,8 @@ from typing import Optional, List, Dict, Any
 
 logger = logging.getLogger("inventree_smart_parts.services.barcode")
 
-GS = "\x1d"   # ASCII 29 – Group Separator
-RS = "\x1e"   # ASCII 30 – Record Separator
+GS = "\x1d"  # ASCII 29 – Group Separator
+RS = "\x1e"  # ASCII 30 – Record Separator
 EOT = "\x04"  # ASCII 4  – End Of Transmission
 
 # Alternative representations scanner wedges emit
@@ -37,34 +37,36 @@ RS_SUBSTITUTES = [
     (re.compile(r"\u241e"), RS),
 ]
 
-HAS_GS_RE = re.compile(r"[\x1d\u241d]|(?:\{GS\}|\[GS\]|~(?=[1-9A-Z])|\|(?=[1-9A-Z]))", re.IGNORECASE)
+HAS_GS_RE = re.compile(
+    r"[\x1d\u241d]|(?:\{GS\}|\[GS\]|~(?=[1-9A-Z])|\|(?=[1-9A-Z]))", re.IGNORECASE
+)
 
 # DI definition table: (prefix, resultKey, isStrong)
 DI_TABLE = [
     ("30P", "supplierSku", True),
-    ("QTY", "quantity",    True),
-    ("1K",  "poNumber",    True),
-    ("1P",  "mpn",         True),
-    ("1T",  "batch",       True),
-    ("1S",  None,          True),
-    ("2S",  None,          True),
-    ("3S",  None,          True),
-    ("4L",  None,          True),
-    ("6D",  None,          True),
-    ("9D",  None,          False),
-    ("PN",  "mpn",         False),
-    ("PO",  "poNumber",    False),
-    ("QT",  "quantity",    False),
-    ("BT",  "batch",       False),
-    ("BX",  None,          False),
-    ("DC",  None,          False),
-    ("LT",  "batch",       False),
-    ("RV",  None,          False),
-    ("K",   "poNumber",    False),
-    ("Q",   "quantity",    False),
-    ("P",   "mpn",         False),
-    ("V",   None,          False),
-    ("S",   None,          False),
+    ("QTY", "quantity", True),
+    ("1K", "poNumber", True),
+    ("1P", "mpn", True),
+    ("1T", "batch", True),
+    ("1S", None, True),
+    ("2S", None, True),
+    ("3S", None, True),
+    ("4L", None, True),
+    ("6D", None, True),
+    ("9D", None, False),
+    ("PN", "mpn", False),
+    ("PO", "poNumber", False),
+    ("QT", "quantity", False),
+    ("BT", "batch", False),
+    ("BX", None, False),
+    ("DC", None, False),
+    ("LT", "batch", False),
+    ("RV", None, False),
+    ("K", "poNumber", False),
+    ("Q", "quantity", False),
+    ("P", "mpn", False),
+    ("V", None, False),
+    ("S", None, False),
 ]
 
 _STRONG_BOUNDARY_RE = re.compile(r"(?=30P|QTY|1[PTKSE]|2S|3S|4L|6D|Q(?=\d)|$)")
@@ -73,6 +75,7 @@ _STRONG_BOUNDARY_RE = re.compile(r"(?=30P|QTY|1[PTKSE]|2S|3S|4L|6D|Q(?=\d)|$)")
 @dataclass
 class BarcodeData:
     """Standardized barcode parse result."""
+
     mpn: str = ""
     quantity: Optional[int] = None
     batch: str = ""
@@ -84,8 +87,8 @@ class BarcodeData:
 
     def to_dict(self) -> Dict[str, Any]:
         from dataclasses import asdict
-        return asdict(self)
 
+        return asdict(self)
 
 
 def _extract_fields(fields: List[str], result: BarcodeData):
@@ -171,7 +174,7 @@ def _try_heuristic_parse(raw: str, result: BarcodeData) -> bool:
     if not m:
         return False
 
-    body = raw[m.end():]
+    body = raw[m.end() :]
     if not body:
         return False
 
@@ -204,7 +207,7 @@ def _try_heuristic_parse(raw: str, result: BarcodeData) -> bool:
                 if pos > 0 and body[pos - 1].isalnum():
                     continue
 
-            after = body[pos + len(prefix):]
+            after = body[pos + len(prefix) :]
             value = ""
 
             if key == "quantity":
@@ -214,7 +217,11 @@ def _try_heuristic_parse(raw: str, result: BarcodeData) -> bool:
                         break
                     if i > 0 and _STRONG_BOUNDARY_RE.match(after[i:]):
                         break
-                    digits.push(char) if hasattr(digits, 'push') else digits.append(char)
+                    (
+                        digits.push(char)
+                        if hasattr(digits, "push")
+                        else digits.append(char)
+                    )
                 value = "".join(digits)
                 if value and key not in fields:
                     try:
@@ -307,13 +314,14 @@ def _try_regex_parse(raw: str, result: BarcodeData) -> bool:
 def _fallback_parse(raw: str, result: BarcodeData):
     cleaned = re.sub(r"[\x00-\x1f\x7f]+", "", raw).strip()
     # Guard: Never treat InvenTree internal JSON barcodes or short codes as fallback MPNs
-    if (cleaned.startswith("{") and cleaned.endswith("}")) or cleaned.startswith("INV-"):
+    if (cleaned.startswith("{") and cleaned.endswith("}")) or cleaned.startswith(
+        "INV-"
+    ):
         result.source = "native_internal"
         return
     if cleaned:
         result.mpn = cleaned
         result.source = "fallback"
-
 
 
 def parse_barcode(raw: str) -> BarcodeData:

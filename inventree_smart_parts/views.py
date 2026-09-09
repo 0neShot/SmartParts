@@ -98,9 +98,7 @@ def _resolve_user(request):
         except Exception:
             pass
 
-        return None, JsonResponse(
-            {"error": "Invalid or expired token"}, status=401
-        )
+        return None, JsonResponse({"error": "Invalid or expired token"}, status=401)
 
     # Fall back to session auth
     user = getattr(request, "user", None)
@@ -535,8 +533,7 @@ def api_search(request):
             src_data["parameters"] = normalize_parameter_list(src_data["parameters"])
 
     limit_params = bool(
-        plugin.get_setting("LIMIT_PARAMETERS_TO_CATEGORY")
-        if plugin else True
+        plugin.get_setting("LIMIT_PARAMETERS_TO_CATEGORY") if plugin else True
     )
 
     if merged_dict and "parameters" in merged_dict:
@@ -553,6 +550,7 @@ def api_search(request):
             if cat_id:
                 try:
                     from part.models import PartCategory
+
                     category_obj = PartCategory.objects.get(pk=cat_id)
                 except Exception:
                     category_obj = None
@@ -566,7 +564,10 @@ def api_search(request):
                 # No valid category matched or category is structural:
                 # Exclude all distributor parameters from active list until user picks a category
                 merged_dict["excluded_parameters"] = [
-                    {"supplier_key": p.get("name", ""), "supplier_value": p.get("value", "")}
+                    {
+                        "supplier_key": p.get("name", ""),
+                        "supplier_value": p.get("value", ""),
+                    }
                     for p in merged_dict["all_parameters"]
                 ]
                 merged_dict["parameters"] = []
@@ -1197,6 +1198,7 @@ def api_category_parameters(request):
     if category_id is not None:
         try:
             from part.models import PartCategory
+
             category = PartCategory.objects.get(pk=category_id)
             category_path = (
                 category.pathstring
@@ -1235,7 +1237,11 @@ def api_category_parameters(request):
         for a in raw_attributes:
             if isinstance(a, dict):
                 norm_attrs.append(
-                    {"name": a.get("name", ""), "value": a.get("value", ""), "unit": a.get("unit", "")}
+                    {
+                        "name": a.get("name", ""),
+                        "value": a.get("value", ""),
+                        "unit": a.get("unit", ""),
+                    }
                 )
             elif isinstance(a, str):
                 norm_attrs.append({"name": a, "value": "", "unit": ""})
@@ -1831,13 +1837,18 @@ def api_v1_import(request):
         return JsonResponse({"error": "Plugin not loaded"}, status=500)
 
     # ── Distributor queries ─────────────────────────────────────────
-    _log_activity("INFO", f"[API v1] MPN lookup: {mpn} (auto_create={auto_create}, dry_run={dry_run})")
+    _log_activity(
+        "INFO",
+        f"[API v1] MPN lookup: {mpn} (auto_create={auto_create}, dry_run={dry_run})",
+    )
     api_results, results_dict = _run_all_api_searches(plugin, mpn)
 
     # ── Merge ───────────────────────────────────────────────────────
     from .services.data_merger import merge_part_data
 
-    priority_str = plugin.get_setting("API_PRIORITY") or "mouser,digikey,element14,tme,lcsc"
+    priority_str = (
+        plugin.get_setting("API_PRIORITY") or "mouser,digikey,element14,tme,lcsc"
+    )
     priority_order = [p.strip() for p in priority_str.split(",") if p.strip()]
     merged = merge_part_data(api_results, priority_order)
 
@@ -1900,9 +1911,7 @@ def api_v1_import(request):
     if update_existing_override is not None:
         effective_update_existing = update_existing_override
     else:
-        effective_update_existing = (
-            plugin.get_setting("DUPLICATE_ACTION") == "update"
-        )
+        effective_update_existing = plugin.get_setting("DUPLICATE_ACTION") == "update"
 
     # ── Build base response ─────────────────────────────────────────
     response = {
@@ -1981,7 +1990,9 @@ def api_v1_import(request):
                     # to the accepted subset so the caller sees exactly what would persist.
                     merged_dict["parameters"] = fr.accepted_parameters
                 except Exception as _flt_exc:
-                    logger.debug("[API v1] dry-run category filter failed: %s", _flt_exc)
+                    logger.debug(
+                        "[API v1] dry-run category filter failed: %s", _flt_exc
+                    )
         except Exception as _plug_exc:
             logger.debug(
                 "[API v1] Could not read LIMIT_PARAMETERS_TO_CATEGORY: %s", _plug_exc
@@ -1994,11 +2005,14 @@ def api_v1_import(request):
     if full_response:
         response["merged"] = merged_dict
         response["sources"] = results_dict
-        response["parameters"] = merged_dict.get("parameters", []) if merged_dict else []
-        response["supplier_data"] = merged_dict.get("supplier_data", []) if merged_dict else []
+        response["parameters"] = (
+            merged_dict.get("parameters", []) if merged_dict else []
+        )
+        response["supplier_data"] = (
+            merged_dict.get("supplier_data", []) if merged_dict else []
+        )
 
     return JsonResponse(response)
-
 
 
 @csrf_exempt
@@ -2115,7 +2129,11 @@ def api_barcode_lookup(request):
     if request.method == "POST":
         if request.content_type and "application/json" in request.content_type:
             try:
-                body = json.loads(request.body.decode("utf-8") if isinstance(request.body, bytes) else request.body)
+                body = json.loads(
+                    request.body.decode("utf-8")
+                    if isinstance(request.body, bytes)
+                    else request.body
+                )
                 raw_barcode = str(body.get("barcode", "")).strip()
                 mpn = str(body.get("mpn", "")).strip()
                 sku = str(body.get("sku", "")).strip()
@@ -2151,38 +2169,47 @@ def api_barcode_lookup(request):
             j_obj = {}
 
         # 1. Stock Location JSON: {"stocklocation": 5} or {"location": 5}
-        loc_id = j_obj.get("stocklocation") if "stocklocation" in j_obj else j_obj.get("location")
+        loc_id = (
+            j_obj.get("stocklocation")
+            if "stocklocation" in j_obj
+            else j_obj.get("location")
+        )
         if loc_id is not None:
             try:
                 from stock.models import StockLocation
+
                 loc = StockLocation.objects.filter(pk=int(loc_id)).first()
                 if loc:
                     url = f"/web/stock/location/{loc.pk}/"
-                    return JsonResponse({
-                        "found": True,
-                        "is_native": True,
-                        "native_type": "stocklocation",
-                        "part_id": None,
-                        "part_name": loc.name,
-                        "part_ipn": "",
-                        "part_url": url,
-                        "mpn": "",
-                        "distributor": None,
-                        "barcode_data": {"type": "stocklocation", "pk": loc.pk},
-                    })
+                    return JsonResponse(
+                        {
+                            "found": True,
+                            "is_native": True,
+                            "native_type": "stocklocation",
+                            "part_id": None,
+                            "part_name": loc.name,
+                            "part_ipn": "",
+                            "part_url": url,
+                            "mpn": "",
+                            "distributor": None,
+                            "barcode_data": {"type": "stocklocation", "pk": loc.pk},
+                        }
+                    )
                 else:
-                    return JsonResponse({
-                        "found": False,
-                        "is_native": True,
-                        "native_type": "stocklocation",
-                        "part_id": None,
-                        "part_name": "",
-                        "part_ipn": "",
-                        "part_url": None,
-                        "mpn": "",
-                        "error": f"Stock location {loc_id} not found in database",
-                        "barcode_data": {"type": "stocklocation", "pk": loc_id},
-                    })
+                    return JsonResponse(
+                        {
+                            "found": False,
+                            "is_native": True,
+                            "native_type": "stocklocation",
+                            "part_id": None,
+                            "part_name": "",
+                            "part_ipn": "",
+                            "part_url": None,
+                            "mpn": "",
+                            "error": f"Stock location {loc_id} not found in database",
+                            "barcode_data": {"type": "stocklocation", "pk": loc_id},
+                        }
+                    )
             except Exception as e:
                 logger.warning(f"SmartParts: Error resolving stocklocation JSON: {e}")
 
@@ -2191,35 +2218,46 @@ def api_barcode_lookup(request):
         if item_id is not None:
             try:
                 from stock.models import StockItem
-                si = StockItem.objects.filter(pk=int(item_id)).select_related("part").first()
+
+                si = (
+                    StockItem.objects.filter(pk=int(item_id))
+                    .select_related("part")
+                    .first()
+                )
                 if si:
                     url = f"/web/stock/item/{si.pk}/"
                     part_obj = si.part
-                    return JsonResponse({
-                        "found": True,
-                        "is_native": True,
-                        "native_type": "stockitem",
-                        "part_id": part_obj.pk if part_obj else None,
-                        "part_name": part_obj.name if part_obj else str(si),
-                        "part_ipn": getattr(part_obj, "IPN", "") or "" if part_obj else "",
-                        "part_url": url,
-                        "mpn": part_obj.name if part_obj else "",
-                        "distributor": None,
-                        "barcode_data": {"type": "stockitem", "pk": si.pk},
-                    })
+                    return JsonResponse(
+                        {
+                            "found": True,
+                            "is_native": True,
+                            "native_type": "stockitem",
+                            "part_id": part_obj.pk if part_obj else None,
+                            "part_name": part_obj.name if part_obj else str(si),
+                            "part_ipn": (
+                                getattr(part_obj, "IPN", "") or "" if part_obj else ""
+                            ),
+                            "part_url": url,
+                            "mpn": part_obj.name if part_obj else "",
+                            "distributor": None,
+                            "barcode_data": {"type": "stockitem", "pk": si.pk},
+                        }
+                    )
                 else:
-                    return JsonResponse({
-                        "found": False,
-                        "is_native": True,
-                        "native_type": "stockitem",
-                        "part_id": None,
-                        "part_name": "",
-                        "part_ipn": "",
-                        "part_url": None,
-                        "mpn": "",
-                        "error": f"Stock item {item_id} not found in database",
-                        "barcode_data": {"type": "stockitem", "pk": item_id},
-                    })
+                    return JsonResponse(
+                        {
+                            "found": False,
+                            "is_native": True,
+                            "native_type": "stockitem",
+                            "part_id": None,
+                            "part_name": "",
+                            "part_ipn": "",
+                            "part_url": None,
+                            "mpn": "",
+                            "error": f"Stock item {item_id} not found in database",
+                            "barcode_data": {"type": "stockitem", "pk": item_id},
+                        }
+                    )
             except Exception as e:
                 logger.warning(f"SmartParts: Error resolving stockitem JSON: {e}")
 
@@ -2228,52 +2266,126 @@ def api_barcode_lookup(request):
         if part_id is not None:
             try:
                 from part.models import Part
+
                 part = Part.objects.filter(pk=int(part_id)).first()
                 if part:
-                    url = part.get_absolute_url() if hasattr(part, "get_absolute_url") else f"/web/part/{part.pk}/"
-                    return JsonResponse({
-                        "found": True,
-                        "is_native": True,
-                        "native_type": "part",
-                        "part_id": part.pk,
-                        "part_name": part.name,
-                        "part_ipn": getattr(part, "IPN", "") or "",
-                        "part_url": url,
-                        "mpn": part.name,
-                        "distributor": None,
-                        "barcode_data": {"type": "part", "pk": part.pk},
-                    })
+                    url = (
+                        part.get_absolute_url()
+                        if hasattr(part, "get_absolute_url")
+                        else f"/web/part/{part.pk}/"
+                    )
+                    return JsonResponse(
+                        {
+                            "found": True,
+                            "is_native": True,
+                            "native_type": "part",
+                            "part_id": part.pk,
+                            "part_name": part.name,
+                            "part_ipn": getattr(part, "IPN", "") or "",
+                            "part_url": url,
+                            "mpn": part.name,
+                            "distributor": None,
+                            "barcode_data": {"type": "part", "pk": part.pk},
+                        }
+                    )
                 else:
-                    return JsonResponse({
-                        "found": False,
-                        "is_native": True,
-                        "native_type": "part",
-                        "part_id": None,
-                        "part_name": "",
-                        "part_ipn": "",
-                        "part_url": None,
-                        "mpn": "",
-                        "error": f"Part {part_id} not found in database",
-                        "barcode_data": {"type": "part", "pk": part_id},
-                    })
+                    return JsonResponse(
+                        {
+                            "found": False,
+                            "is_native": True,
+                            "native_type": "part",
+                            "part_id": None,
+                            "part_name": "",
+                            "part_ipn": "",
+                            "part_url": None,
+                            "mpn": "",
+                            "error": f"Part {part_id} not found in database",
+                            "barcode_data": {"type": "part", "pk": part_id},
+                        }
+                    )
             except Exception as e:
                 logger.warning(f"SmartParts: Error resolving part JSON: {e}")
 
         # 4. Core Order & Manufacturing JSON models (Purchase Orders, Build Orders, Sales Orders, Return Orders, Supplier/Manufacturer Parts)
         ORDER_ROUTE_MAP = {
-            "purchaseorder": ("order.models", "PurchaseOrder", "/web/purchasing/purchase-order/", "reference"),
-            "purchase_order": ("order.models", "PurchaseOrder", "/web/purchasing/purchase-order/", "reference"),
-            "build": ("build.models", "Build", "/web/manufacturing/build-order/", "reference"),
-            "buildorder": ("build.models", "Build", "/web/manufacturing/build-order/", "reference"),
-            "build_order": ("build.models", "Build", "/web/manufacturing/build-order/", "reference"),
-            "salesorder": ("order.models", "SalesOrder", "/web/sales/sales-order/", "reference"),
-            "sales_order": ("order.models", "SalesOrder", "/web/sales/sales-order/", "reference"),
-            "returnorder": ("order.models", "ReturnOrder", "/web/sales/return-order/", "reference"),
-            "return_order": ("order.models", "ReturnOrder", "/web/sales/return-order/", "reference"),
-            "supplierpart": ("company.models", "SupplierPart", "/web/purchasing/supplier-part/", "SKU"),
-            "supplier_part": ("company.models", "SupplierPart", "/web/purchasing/supplier-part/", "SKU"),
-            "manufacturerpart": ("company.models", "ManufacturerPart", "/web/part/manufacturer-part/", "MPN"),
-            "manufacturer_part": ("company.models", "ManufacturerPart", "/web/part/manufacturer-part/", "MPN"),
+            "purchaseorder": (
+                "order.models",
+                "PurchaseOrder",
+                "/web/purchasing/purchase-order/",
+                "reference",
+            ),
+            "purchase_order": (
+                "order.models",
+                "PurchaseOrder",
+                "/web/purchasing/purchase-order/",
+                "reference",
+            ),
+            "build": (
+                "build.models",
+                "Build",
+                "/web/manufacturing/build-order/",
+                "reference",
+            ),
+            "buildorder": (
+                "build.models",
+                "Build",
+                "/web/manufacturing/build-order/",
+                "reference",
+            ),
+            "build_order": (
+                "build.models",
+                "Build",
+                "/web/manufacturing/build-order/",
+                "reference",
+            ),
+            "salesorder": (
+                "order.models",
+                "SalesOrder",
+                "/web/sales/sales-order/",
+                "reference",
+            ),
+            "sales_order": (
+                "order.models",
+                "SalesOrder",
+                "/web/sales/sales-order/",
+                "reference",
+            ),
+            "returnorder": (
+                "order.models",
+                "ReturnOrder",
+                "/web/sales/return-order/",
+                "reference",
+            ),
+            "return_order": (
+                "order.models",
+                "ReturnOrder",
+                "/web/sales/return-order/",
+                "reference",
+            ),
+            "supplierpart": (
+                "company.models",
+                "SupplierPart",
+                "/web/purchasing/supplier-part/",
+                "SKU",
+            ),
+            "supplier_part": (
+                "company.models",
+                "SupplierPart",
+                "/web/purchasing/supplier-part/",
+                "SKU",
+            ),
+            "manufacturerpart": (
+                "company.models",
+                "ManufacturerPart",
+                "/web/part/manufacturer-part/",
+                "MPN",
+            ),
+            "manufacturer_part": (
+                "company.models",
+                "ManufacturerPart",
+                "/web/part/manufacturer-part/",
+                "MPN",
+            ),
         }
 
         for k, v in j_obj.items():
@@ -2282,7 +2394,11 @@ def api_barcode_lookup(request):
             if match_def and v is not None:
                 mod_name, cls_name, route_pfx, name_attr = match_def
                 try:
-                    pk_val = int(v) if not isinstance(v, dict) else int(v.get("pk") or v.get("id"))
+                    pk_val = (
+                        int(v)
+                        if not isinstance(v, dict)
+                        else int(v.get("pk") or v.get("id"))
+                    )
                 except (ValueError, TypeError):
                     continue
                 try:
@@ -2293,52 +2409,59 @@ def api_barcode_lookup(request):
                     if obj:
                         url = f"{route_pfx}{obj.pk}/"
                         obj_name = str(getattr(obj, name_attr, "") or obj)
-                        return JsonResponse({
-                            "found": True,
-                            "is_native": True,
-                            "native_type": clean_norm,
-                            "part_id": None,
-                            "part_name": obj_name,
-                            "part_ipn": "",
-                            "part_url": url,
-                            "mpn": "",
-                            "distributor": None,
-                            "barcode_data": {"type": clean_norm, "pk": obj.pk},
-                        })
+                        return JsonResponse(
+                            {
+                                "found": True,
+                                "is_native": True,
+                                "native_type": clean_norm,
+                                "part_id": None,
+                                "part_name": obj_name,
+                                "part_ipn": "",
+                                "part_url": url,
+                                "mpn": "",
+                                "distributor": None,
+                                "barcode_data": {"type": clean_norm, "pk": obj.pk},
+                            }
+                        )
                     else:
-                        return JsonResponse({
-                            "found": False,
-                            "is_native": True,
-                            "native_type": clean_norm,
-                            "part_id": None,
-                            "part_name": "",
-                            "part_ipn": "",
-                            "part_url": None,
-                            "mpn": "",
-                            "error": f"{cls_name} {pk_val} not found in database",
-                            "barcode_data": {"type": clean_norm, "pk": pk_val},
-                        })
+                        return JsonResponse(
+                            {
+                                "found": False,
+                                "is_native": True,
+                                "native_type": clean_norm,
+                                "part_id": None,
+                                "part_name": "",
+                                "part_ipn": "",
+                                "part_url": None,
+                                "mpn": "",
+                                "error": f"{cls_name} {pk_val} not found in database",
+                                "barcode_data": {"type": clean_norm, "pk": pk_val},
+                            }
+                        )
                 except Exception as e:
                     logger.warning(f"SmartParts: Error resolving {cls_name} JSON: {e}")
 
         # 5. Any other JSON object: internal object, never an MPN
-        return JsonResponse({
-            "found": False,
-            "is_native": True,
-            "native_type": "json_internal",
-            "part_id": None,
-            "part_name": "",
-            "part_ipn": "",
-            "part_url": None,
-            "mpn": "",
-            "error": "Internal InvenTree JSON barcode payload",
-            "barcode_data": j_obj,
-        })
+        return JsonResponse(
+            {
+                "found": False,
+                "is_native": True,
+                "native_type": "json_internal",
+                "part_id": None,
+                "part_name": "",
+                "part_ipn": "",
+                "part_url": None,
+                "mpn": "",
+                "error": "Internal InvenTree JSON barcode payload",
+                "barcode_data": j_obj,
+            }
+        )
 
     # InvenTree Short Codes: INV-...
     if clean_raw.startswith("INV-"):
         try:
             from plugin import PluginMixinEnum, registry
+
             for p in registry.with_mixin(PluginMixinEnum.BARCODE):
                 if getattr(p, "slug", "") == "smartparts":
                     continue
@@ -2348,48 +2471,61 @@ def api_barcode_lookup(request):
                         "stocklocation": ("/web/stock/location/", "name"),
                         "stockitem": ("/web/stock/item/", None),
                         "part": ("/web/part/", "name"),
-                        "purchaseorder": ("/web/purchasing/purchase-order/", "reference"),
+                        "purchaseorder": (
+                            "/web/purchasing/purchase-order/",
+                            "reference",
+                        ),
                         "build": ("/web/manufacturing/build-order/", "reference"),
                         "salesorder": ("/web/sales/sales-order/", "reference"),
                         "returnorder": ("/web/sales/return-order/", "reference"),
                         "supplierpart": ("/web/purchasing/supplier-part/", "SKU"),
                         "manufacturerpart": ("/web/part/manufacturer-part/", "MPN"),
                     }
-                    for model_key, (route_pfx, name_field) in MODEL_SHORTCODE_MAP.items():
+                    for model_key, (
+                        route_pfx,
+                        name_field,
+                    ) in MODEL_SHORTCODE_MAP.items():
                         if model_key in res:
                             info = res[model_key]
                             pk = info.get("pk")
                             url = info.get("web_url") or f"{route_pfx}{pk}/"
                             inst = info.get("instance", {})
-                            name = (inst.get(name_field) if name_field else None) or inst.get("name") or str(pk)
-                            return JsonResponse({
-                                "found": True,
-                                "is_native": True,
-                                "native_type": model_key,
-                                "part_id": pk if model_key == "part" else None,
-                                "part_name": name,
-                                "part_ipn": "",
-                                "part_url": url,
-                                "mpn": name if model_key == "part" else "",
-                                "distributor": None,
-                                "barcode_data": res,
-                            })
+                            name = (
+                                (inst.get(name_field) if name_field else None)
+                                or inst.get("name")
+                                or str(pk)
+                            )
+                            return JsonResponse(
+                                {
+                                    "found": True,
+                                    "is_native": True,
+                                    "native_type": model_key,
+                                    "part_id": pk if model_key == "part" else None,
+                                    "part_name": name,
+                                    "part_ipn": "",
+                                    "part_url": url,
+                                    "mpn": name if model_key == "part" else "",
+                                    "distributor": None,
+                                    "barcode_data": res,
+                                }
+                            )
         except Exception as e:
             logger.warning(f"SmartParts: Error checking short barcode: {e}")
 
-        return JsonResponse({
-            "found": False,
-            "is_native": True,
-            "native_type": "short_code",
-            "part_id": None,
-            "part_name": "",
-            "part_ipn": "",
-            "part_url": None,
-            "mpn": "",
-            "error": f"InvenTree short barcode {clean_raw} not found",
-            "barcode_data": {"barcode": clean_raw},
-        })
-
+        return JsonResponse(
+            {
+                "found": False,
+                "is_native": True,
+                "native_type": "short_code",
+                "part_id": None,
+                "part_name": "",
+                "part_ipn": "",
+                "part_url": None,
+                "mpn": "",
+                "error": f"InvenTree short barcode {clean_raw} not found",
+                "barcode_data": {"barcode": clean_raw},
+            }
+        )
 
     part = None
 
@@ -2399,23 +2535,38 @@ def api_barcode_lookup(request):
 
         # 1. Match MPN against ManufacturerPart.MPN
         if mpn:
-            mfg = ManufacturerPart.objects.filter(MPN__iexact=mpn).select_related("part").first()
+            mfg = (
+                ManufacturerPart.objects.filter(MPN__iexact=mpn)
+                .select_related("part")
+                .first()
+            )
             if mfg and mfg.part:
                 part = mfg.part
 
         # 2. Match MPN against Part.IPN or Part.name
         if not part and mpn:
-            part = Part.objects.filter(IPN__iexact=mpn).first() or Part.objects.filter(name__iexact=mpn).first()
+            part = (
+                Part.objects.filter(IPN__iexact=mpn).first()
+                or Part.objects.filter(name__iexact=mpn).first()
+            )
 
         # 3. Match MPN against SupplierPart.SKU
         if not part and mpn:
-            sup = SupplierPart.objects.filter(SKU__iexact=mpn).select_related("part").first()
+            sup = (
+                SupplierPart.objects.filter(SKU__iexact=mpn)
+                .select_related("part")
+                .first()
+            )
             if sup and sup.part:
                 part = sup.part
 
         # 4. Match supplier SKU against SupplierPart.SKU
         if not part and sku:
-            sup = SupplierPart.objects.filter(SKU__iexact=sku).select_related("part").first()
+            sup = (
+                SupplierPart.objects.filter(SKU__iexact=sku)
+                .select_related("part")
+                .first()
+            )
             if sup and sup.part:
                 part = sup.part
 
@@ -2427,34 +2578,42 @@ def api_barcode_lookup(request):
         logger.warning(f"SmartParts: barcode lookup exception: {exc}")
 
     if part:
-        url = part.get_absolute_url() if hasattr(part, "get_absolute_url") else f"/web/part/{part.pk}"
-        return JsonResponse({
-            "found": True,
-            "part_id": part.pk,
-            "part_name": part.name,
-            "part_ipn": getattr(part, "IPN", "") or "",
-            "part_url": url,
-            "mpn": mpn or part.name,
-            "distributor": parsed.distributor if parsed else None,
-            "barcode_data": parsed.to_dict() if parsed else None,
-        })
+        url = (
+            part.get_absolute_url()
+            if hasattr(part, "get_absolute_url")
+            else f"/web/part/{part.pk}"
+        )
+        return JsonResponse(
+            {
+                "found": True,
+                "part_id": part.pk,
+                "part_name": part.name,
+                "part_ipn": getattr(part, "IPN", "") or "",
+                "part_url": url,
+                "mpn": mpn or part.name,
+                "distributor": parsed.distributor if parsed else None,
+                "barcode_data": parsed.to_dict() if parsed else None,
+            }
+        )
 
     # Final safety guard: ensure raw JSON, braces, or internal prefixes NEVER leak as mpn
-    if mpn and ("{" in mpn or "}" in mpn or mpn.startswith("INV-") or mpn.startswith("IN:")):
+    if mpn and (
+        "{" in mpn or "}" in mpn or mpn.startswith("INV-") or mpn.startswith("IN:")
+    ):
         mpn = ""
 
-    return JsonResponse({
-        "found": False,
-        "part_id": None,
-        "part_name": "",
-        "part_ipn": "",
-        "part_url": None,
-        "mpn": mpn,
-        "distributor": parsed.distributor if parsed else None,
-        "barcode_data": parsed.to_dict() if parsed else None,
-    })
+    return JsonResponse(
+        {
+            "found": False,
+            "part_id": None,
+            "part_name": "",
+            "part_ipn": "",
+            "part_url": None,
+            "mpn": mpn,
+            "distributor": parsed.distributor if parsed else None,
+            "barcode_data": parsed.to_dict() if parsed else None,
+        }
+    )
 
 
 api_barcode_lookup.auth_exempt = True
-
-

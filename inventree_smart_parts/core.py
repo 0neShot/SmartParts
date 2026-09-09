@@ -19,7 +19,9 @@ from plugin.mixins import (
 logger = logging.getLogger("inventree_smart_parts")
 
 
-class SmartPartsPlugin(UserInterfaceMixin, BarcodeMixin, SettingsMixin, UrlsMixin, InvenTreePlugin):
+class SmartPartsPlugin(
+    UserInterfaceMixin, BarcodeMixin, SettingsMixin, UrlsMixin, InvenTreePlugin
+):
     """
     InvenTree Smart Parts – Intelligent Inventory Assistant.
 
@@ -319,17 +321,32 @@ class SmartPartsPlugin(UserInterfaceMixin, BarcodeMixin, SettingsMixin, UrlsMixi
 
             part = None
             if mpn:
-                mfg = ManufacturerPart.objects.filter(MPN__iexact=mpn).select_related("part").first()
+                mfg = (
+                    ManufacturerPart.objects.filter(MPN__iexact=mpn)
+                    .select_related("part")
+                    .first()
+                )
                 if mfg and mfg.part:
                     part = mfg.part
                 if not part:
-                    part = Part.objects.filter(IPN__iexact=mpn).first() or Part.objects.filter(name__iexact=mpn).first()
+                    part = (
+                        Part.objects.filter(IPN__iexact=mpn).first()
+                        or Part.objects.filter(name__iexact=mpn).first()
+                    )
                 if not part:
-                    sup = SupplierPart.objects.filter(SKU__iexact=mpn).select_related("part").first()
+                    sup = (
+                        SupplierPart.objects.filter(SKU__iexact=mpn)
+                        .select_related("part")
+                        .first()
+                    )
                     if sup and sup.part:
                         part = sup.part
             if not part and sku:
-                sup = SupplierPart.objects.filter(SKU__iexact=sku).select_related("part").first()
+                sup = (
+                    SupplierPart.objects.filter(SKU__iexact=sku)
+                    .select_related("part")
+                    .first()
+                )
                 if sup and sup.part:
                     part = sup.part
 
@@ -340,7 +357,11 @@ class SmartPartsPlugin(UserInterfaceMixin, BarcodeMixin, SettingsMixin, UrlsMixi
                     "part": {
                         "pk": part.pk,
                         "name": part.name,
-                        "url": part.get_absolute_url() if hasattr(part, "get_absolute_url") else f"/web/part/{part.pk}",
+                        "url": (
+                            part.get_absolute_url()
+                            if hasattr(part, "get_absolute_url")
+                            else f"/web/part/{part.pk}"
+                        ),
                     }
                 }
         except Exception as exc:
@@ -438,7 +459,9 @@ class SmartPartsPlugin(UserInterfaceMixin, BarcodeMixin, SettingsMixin, UrlsMixi
             # Authenticate via: Authorization: Token <inventree-api-token>
             # or active InvenTree session.
             path("api/v1/import/", views.api_v1_import, name="api-v1-import"),
-            path("api/v1/raw-lookup/", views.api_v1_raw_lookup, name="api-v1-raw-lookup"),
+            path(
+                "api/v1/raw-lookup/", views.api_v1_raw_lookup, name="api-v1-raw-lookup"
+            ),
             # ── Category Parameter Template API ─────────────────────────
             path(
                 "api/category/parameters/",
@@ -457,7 +480,9 @@ class SmartPartsPlugin(UserInterfaceMixin, BarcodeMixin, SettingsMixin, UrlsMixi
 def _serve_media(request, path, document_root=None):
     """Serve media files directly with auth_exempt so browser image tags load without redirects."""
     from django.views.static import serve
+
     return serve(request, path, document_root=document_root)
+
 
 _serve_media.auth_exempt = True
 
@@ -486,7 +511,9 @@ def _ensure_media_url_served():
         )
         InvenTree.urls.urlpatterns.insert(0, media_pattern)
         clear_url_caches()
-        logger.info("SmartParts: Added auth-exempt media file serve route to root urlpatterns")
+        logger.info(
+            "SmartParts: Added auth-exempt media file serve route to root urlpatterns"
+        )
     except Exception as e:
         logger.warning(f"SmartParts: Could not ensure media route: {e}")
 
@@ -533,7 +560,9 @@ def _ensure_global_scanner_script():
         for tpl_cfg in getattr(settings, "TEMPLATES", []):
             for d in tpl_cfg.get("DIRS", []):
                 candidate_paths.append(os.path.join(d, "favicon.html"))
-        candidate_paths.append("/home/inventree/src/backend/InvenTree/templates/favicon.html")
+        candidate_paths.append(
+            "/home/inventree/src/backend/InvenTree/templates/favicon.html"
+        )
 
         for fpath in candidate_paths:
             if os.path.exists(fpath):
@@ -541,8 +570,12 @@ def _ensure_global_scanner_script():
                     content = f.read()
                 if target_tag not in content:
                     with open(fpath, "a", encoding="utf-8") as f:
-                        f.write(f"\n<!-- SmartParts Global Barcode Scanner -->\n{target_tag}\n")
-                    logger.info(f"SmartParts: Injected global scanner script into {fpath}")
+                        f.write(
+                            f"\n<!-- SmartParts Global Barcode Scanner -->\n{target_tag}\n"
+                        )
+                    logger.info(
+                        f"SmartParts: Injected global scanner script into {fpath}"
+                    )
                 break
     except Exception as e:
         logger.warning(f"SmartParts: Could not ensure global scanner script: {e}")
@@ -562,10 +595,14 @@ def _ensure_plugin_static_served():
         import InvenTree.urls
 
         for p in InvenTree.urls.urlpatterns:
-            if getattr(p, "pattern", None) and str(p.pattern).startswith(r"^static/plugins/smartparts/"):
+            if getattr(p, "pattern", None) and str(p.pattern).startswith(
+                r"^static/plugins/smartparts/"
+            ):
                 return
 
-        static_plugin_dir = os.path.join(getattr(settings, "STATIC_ROOT", ""), "plugins", "smartparts")
+        static_plugin_dir = os.path.join(
+            getattr(settings, "STATIC_ROOT", ""), "plugins", "smartparts"
+        )
         if not os.path.exists(static_plugin_dir):
             static_plugin_dir = os.path.join(os.path.dirname(__file__), "static")
 
@@ -583,7 +620,9 @@ def _ensure_plugin_static_served():
         )
         InvenTree.urls.urlpatterns.insert(0, static_pattern)
         clear_url_caches()
-        logger.info(f"SmartParts: Added static file serve route for {static_plugin_dir}")
+        logger.info(
+            f"SmartParts: Added static file serve route for {static_plugin_dir}"
+        )
     except Exception as e:
         logger.warning(f"SmartParts: Could not ensure plugin static route: {e}")
 
@@ -646,9 +685,7 @@ def get_resolved_category_templates(category) -> dict:
                     category=anc
                 ).select_related("template")
             except Exception:
-                templates = PartCategoryParameterTemplate.objects.filter(
-                    category=anc
-                )
+                templates = PartCategoryParameterTemplate.objects.filter(category=anc)
 
             for tpl in templates:
                 template_obj = getattr(tpl, "template", None) or getattr(
@@ -668,4 +705,3 @@ def get_resolved_category_templates(category) -> dict:
             f"category={getattr(category, 'pk', category)}: {exc}"
         )
         return {}
-

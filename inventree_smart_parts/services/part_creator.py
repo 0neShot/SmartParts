@@ -131,7 +131,9 @@ def create_part_from_data(
                     logger.warning(
                         "create_part_from_data: refused structural category "
                         "id=%s ('%s') for MPN '%s'",
-                        category_id, _cat.name, part_data.mpn,
+                        category_id,
+                        _cat.name,
+                        part_data.mpn,
                     )
                     return result
             except PartCategory.DoesNotExist:
@@ -727,9 +729,7 @@ def _create_parameters(
     limit_to_category = True  # safe default
     if plugin:
         try:
-            limit_to_category = bool(
-                plugin.get_setting("LIMIT_PARAMETERS_TO_CATEGORY")
-            )
+            limit_to_category = bool(plugin.get_setting("LIMIT_PARAMETERS_TO_CATEGORY"))
         except Exception:
             pass
 
@@ -747,7 +747,9 @@ def _create_parameters(
 
             # Separate manual (explicitly user-added or pre-existing) from distributor params
             manual_params = [p for p in clean_params if getattr(p, "manual", False)]
-            distributor_params = [p for p in clean_params if not getattr(p, "manual", False)]
+            distributor_params = [
+                p for p in clean_params if not getattr(p, "manual", False)
+            ]
 
             # Normalise distributor params to dicts for the filter function
             param_dicts = [

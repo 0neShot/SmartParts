@@ -227,8 +227,7 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "dünnfilmwiderstände": "surface mount smd resistors",
     "duennfilmwiderstaende": "surface mount smd resistors",
     "stromsensoren": "sensors transducers",
-
-        # ════════════════════════════════════════════════════════════════
+    # ════════════════════════════════════════════════════════════════
     # Widerstand & Widerstände
     # ════════════════════════════════════════════════════════════════
     "widerstand": "Resistance",
@@ -242,13 +241,11 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "widerstandsbereich": "Resistance",
     "widerstandswertebereich": "Resistance",
     "r-wert": "Resistance",
- 
     "widerstandstoleranz": "Resistance Tolerance",
     "toleranz widerstand": "Resistance Tolerance",
     "toleranz (widerstand)": "Resistance Tolerance",
     "widerstands-toleranz": "Resistance Tolerance",
     "genauigkeit widerstand": "Resistance Tolerance",
- 
     "temperaturkoeffizient": "Temperature Coefficient (TCR)",
     "temperaturkoeffizient des widerstands": "Temperature Coefficient (TCR)",
     "temperaturkoeffizient (ppm/k)": "Temperature Coefficient (TCR)",
@@ -256,7 +253,6 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "tk": "Temperature Coefficient (TCR)",
     "tkr": "Temperature Coefficient (TCR)",
     "tc": "Temperature Coefficient (TCR)",
- 
     # NEU: Nennleistung / Belastbarkeit taucht bei praktisch jedem
     # Widerstand/Bauteil bei RS, Mouser, Digi-Key DE als eigenes Feld auf
     "nennleistung": "Power Rating",
@@ -267,7 +263,6 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "leistungsaufnahme": "Power Rating",
     "leistungsangabe": "Power Rating",
     "watt": "Power Rating",
- 
     # ════════════════════════════════════════════════════════════════
     # Kapazität & Kondensatoren
     # ════════════════════════════════════════════════════════════════
@@ -280,13 +275,11 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "kondensatorwert": "Capacitance",
     "kapazitätsbereich": "Capacitance",
     "c-wert": "Capacitance",
- 
     "kapazitätstoleranz": "Capacitance Tolerance",
     "kapazitaetstoleranz": "Capacitance Tolerance",
     "toleranz kondensator": "Capacitance Tolerance",
     "toleranz (kondensator)": "Capacitance Tolerance",
     "genauigkeit kondensator": "Capacitance Tolerance",
- 
     "dielektrikum": "Dielectric Material",
     "dielektrisches material": "Dielectric Material",
     "dielektrikumstyp": "Dielectric Material",
@@ -294,27 +287,23 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "keramikklasse": "Dielectric Material",
     "kondensatortyp": "Dielectric Material",
     "kondensator typ": "Dielectric Material",
- 
     "äquivalenter serienwiderstand": "Equivalent Series Resistance (ESR)",
     "aequivalenter serienwiderstand": "Equivalent Series Resistance (ESR)",
     "esr": "Equivalent Series Resistance (ESR)",
     "esr (ohm)": "Equivalent Series Resistance (ESR)",
     "max. esr": "Equivalent Series Resistance (ESR)",
     "serienwiderstand": "Equivalent Series Resistance (ESR)",
- 
     "rippelstrom": "Ripple Current",
     "welligkeitsstrom": "Ripple Current",
     "max. rippelstrom": "Ripple Current",
     "zulässiger rippelstrom": "Ripple Current",
     "zulaessiger rippelstrom": "Ripple Current",
     "brummstrom": "Ripple Current",
- 
     "leckstrom": "Leakage Current",
     "kriechstrom": "Leakage Current",
     "max. leckstrom": "Leakage Current",
     "dc-leckstrom": "Leakage Current",
     "ableitstrom": "Leakage Current",
- 
     # ════════════════════════════════════════════════════════════════
     # Induktivität & Magnetika
     # ════════════════════════════════════════════════════════════════
@@ -324,12 +313,10 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "nenninduktivität": "Inductance",
     "nenninduktivitaet": "Inductance",
     "l-wert": "Inductance",
- 
     "induktivitätstoleranz": "Inductance Tolerance",
     "induktivitaetstoleranz": "Inductance Tolerance",
     "toleranz spule": "Inductance Tolerance",
     "toleranz induktivität": "Inductance Tolerance",
- 
     "gütefaktor": "Q Factor",
     "guetefaktor": "Q Factor",
     "q-faktor": "Q Factor",
@@ -337,33 +324,27 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "guete": "Q Factor",
     "min. güte": "Q Factor",
     "min. guete": "Q Factor",
- 
     "eigenresonanzfrequenz": "Self Resonant Frequency (SRF)",
     "resonanzfrequenz": "Self Resonant Frequency (SRF)",
     "eigenresonanz": "Self Resonant Frequency (SRF)",
     "srf": "Self Resonant Frequency (SRF)",
     "min. srf": "Self Resonant Frequency (SRF)",
- 
     "gleichstromwiderstand": "DC Resistance (DCR)",
     "dc-widerstand": "DC Resistance (DCR)",
     "dcr": "DC Resistance (DCR)",
     "max. dcr": "DC Resistance (DCR)",
     "spulenwiderstand (dc)": "DC Resistance (DCR)",
- 
     "kernmaterial": "Core Material",
     "spulenkern": "Core Material",
     "kerntyp": "Core Material",
- 
     "sättigungsstrom": "Saturation Current (Isat)",
     "saettigungsstrom": "Saturation Current (Isat)",
     "isat": "Saturation Current (Isat)",
     "max. sättigungsstrom": "Saturation Current (Isat)",
- 
     "temperaturanstiegsstrom": "Temperature Rise Current (Itemp)",
     "effektivstrom": "Temperature Rise Current (Itemp)",
     "itemp": "Temperature Rise Current (Itemp)",
     "nennstrom (temperaturanstieg)": "Temperature Rise Current (Itemp)",
- 
     # ════════════════════════════════════════════════════════════════
     # Spannungsangaben
     # ════════════════════════════════════════════════════════════════
@@ -382,7 +363,6 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "vdc": "Voltage Rating",
     "minimale betriebsspannung": "Voltage Rating",
     "maximale betriebsspannung": "Voltage Rating",
- 
     # ════════════════════════════════════════════════════════════════
     # Montageart / Bauform (Bestückung)
     # ════════════════════════════════════════════════════════════════
@@ -395,7 +375,6 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "bestueckungsart": "Mounting Type",
     "smd/tht": "Mounting Type",
     "smd / tht": "Mounting Type",
- 
     # NEU: Anschlussart / Axial-Radial-SMD -> eigene Kategorie,
     # da bei RS/Farnell meist getrennt von "Termination Style" geführt
     "anschlussart": "Terminal Style",
@@ -405,7 +384,6 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "bauform anschluss": "Terminal Style",
     "gehäuseform anschluss": "Terminal Style",
     "leitungsform": "Terminal Style",
- 
     # ════════════════════════════════════════════════════════════════
     # Grundlegende Halbleiterwerte
     # ════════════════════════════════════════════════════════════════
@@ -415,33 +393,28 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "max. durchlassspannung": "Forward Voltage",
     "flussspannung": "Forward Voltage",
     "vf": "Forward Voltage",
- 
     "sperrspannung": "Reverse Voltage",
     "rückwärtsspannung": "Reverse Voltage",
     "rueckwaertsspannung": "Reverse Voltage",
     "max. sperrspannung": "Reverse Voltage",
     "dc-sperrspannung": "Reverse Voltage",
     "vr": "Reverse Voltage",
- 
     "sperrstrom": "Reverse Current",
     "rückwärtsstrom": "Reverse Current",
     "rueckwaertsstrom": "Reverse Current",
     "max. sperrstrom": "Reverse Current",
     "sperrschichtleckstrom": "Reverse Current",
     "ir": "Reverse Current",
- 
     "zener-spannung": "Zener Voltage",
     "zenerspannung": "Zener Voltage",
     "z-spannung": "Zener Voltage",
     "nennzenerspannung": "Zener Voltage",
     "vz": "Zener Voltage",
- 
     "sperrverzugszeit": "Reverse Recovery Time",
     "rückwärtserholzeit": "Reverse Recovery Time",
     "rueckwaertserholzeit": "Reverse Recovery Time",
     "erholzeit": "Reverse Recovery Time",
     "trr": "Reverse Recovery Time",
- 
     # ════════════════════════════════════════════════════════════════
     # Transistoren (BJT & MOSFET)
     # ════════════════════════════════════════════════════════════════
@@ -451,50 +424,39 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "gleichstromverstaerkung": "Current Gain (hFE)",
     "hfe": "Current Gain (hFE)",
     "hfe min.": "Current Gain (hFE)",
- 
     "kollektor-emitter-sättigungsspannung": "Collector-Emitter Saturation Voltage",
     "kollektor-emitter-saettigungsspannung": "Collector-Emitter Saturation Voltage",
     "vce sat": "Collector-Emitter Saturation Voltage",
     "vce(sat)": "Collector-Emitter Saturation Voltage",
- 
     "kollektorstrom": "Continuous Collector Current",
     "dauerkollektorstrom": "Continuous Collector Current",
     "max. kollektorstrom": "Continuous Collector Current",
     "ic": "Continuous Collector Current",
- 
     "drainstrom": "Continuous Drain Current (Id)",
     "dauerdrainstrom": "Continuous Drain Current (Id)",
     "max. drainstrom": "Continuous Drain Current (Id)",
     "id": "Continuous Drain Current (Id)",
- 
     "drain-source-spannung": "Drain to Source Voltage (Vdss)",
     "drain-source-durchbruchspannung": "Drain to Source Voltage (Vdss)",
     "vdss": "Drain to Source Voltage (Vdss)",
- 
     "gate-source-schwellenspannung": "Gate to Source Threshold Voltage (Vgs th)",
     "gate-schwellenspannung": "Gate to Source Threshold Voltage (Vgs th)",
     "vgs(th)": "Gate to Source Threshold Voltage (Vgs th)",
- 
     "einschaltwiderstand": "On Resistance (Rds On)",
     "durchlasswiderstand": "On Resistance (Rds On)",
     "rds(on)": "On Resistance (Rds On)",
     "rds on": "On Resistance (Rds On)",
- 
     "gate-ladung": "Gate Charge",
     "gesamtgateladung": "Gate Charge",
     "qg": "Gate Charge",
- 
     "eingangskapazität": "Input Capacitance",
     "eingangskapazitaet": "Input Capacitance",
     "ciss": "Input Capacitance",
- 
     "ausgangskapazität": "Output Capacitance",
     "ausgangskapazitaet": "Output Capacitance",
     "coss": "Output Capacitance",
- 
     "sperrverzugsladung": "Reverse Recovery Charge (Qrr)",
     "qrr": "Reverse Recovery Charge (Qrr)",
- 
     # ════════════════════════════════════════════════════════════════
     # Integrierte Schaltungen (ICs) & Leistung
     # ════════════════════════════════════════════════════════════════
@@ -503,25 +465,21 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "versorgungsspannungsbereich": "Supply Voltage",
     "vcc": "Supply Voltage",
     "vdd": "Supply Voltage",
- 
     "versorgungsstrom": "Supply Current",
     "betriebsstrom": "Supply Current",
     "ruhestrom": "Supply Current",
     "icc": "Supply Current",
     "idd": "Supply Current",
- 
     "ausgangsstrom": "Output Current",
     "max. ausgangsstrom": "Output Current",
     "dauerausgangsstrom": "Output Current",
     "iout": "Output Current",
- 
     "schnittstelle": "Interface",
     "kommunikationsschnittstelle": "Interface",
     "anschlussmöglichkeiten": "Interface",
     "anschlussmoeglichkeiten": "Interface",
     "bus-schnittstelle": "Interface",
     "protokoll": "Interface",
- 
     "speichergröße": "Memory Size",
     "speichergroesse": "Memory Size",
     "speicherkapazität": "Memory Size",
@@ -530,16 +488,13 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "programmspeichergroesse": "Memory Size",
     "ram-größe": "Memory Size",
     "flash-größe": "Memory Size",
- 
     "speichertyp": "Memory Type",
     "speicherart": "Memory Type",
     "nichtflüchtiger speichertyp": "Memory Type",
- 
     "taktfrequenz": "Clock Frequency",
     "taktrate": "Clock Frequency",
     "oszillatorfrequenz": "Clock Frequency",
     "max. taktfrequenz": "Clock Frequency",
- 
     "pinanzahl": "Pin Count",
     "anzahl pins": "Pin Count",
     "anzahl anschlüsse": "Pin Count",
@@ -547,60 +502,47 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "anzahl der anschlüsse": "Pin Count",
     "anschlusszahl": "Pin Count",
     "polzahl": "Pin Count",
- 
     "prozessorkern": "Core Processor",
     "kernarchitektur": "Core Processor",
     "cpu-kern": "Core Processor",
- 
     "kernbreite": "Core Width",
     "datenbusbreite": "Core Width",
     "busbreite": "Core Width",
     "bit-breite": "Core Width",
- 
     "adc-/dac-auflösung": "ADC / DAC Resolution",
     "adc-/dac-aufloesung": "ADC / DAC Resolution",
     "wandlerauflösung": "ADC / DAC Resolution",
     "wandleraufloesung": "ADC / DAC Resolution",
     "auflösung": "ADC / DAC Resolution",
     "aufloesung": "ADC / DAC Resolution",
- 
     "gleichtaktunterdrückung": "Common Mode Rejection Ratio (CMRR)",
     "gleichtaktunterdrueckung": "Common Mode Rejection Ratio (CMRR)",
     "cmrr": "Common Mode Rejection Ratio (CMRR)",
- 
     "anstiegsrate": "Slew Rate",
     "flankensteilheit": "Slew Rate",
     "slew rate": "Slew Rate",
- 
     "logiktyp": "Logic Type",
     "logikfamilie": "Logic Type",
     "logikfunktion": "Logic Type",
- 
     "ausgangstyp": "Output Type",
     "ausgangskonfiguration": "Output Type",
     "logikausgangstyp": "Output Type",
- 
     "referenzspannung": "Reference Voltage",
     "spannungsreferenz": "Reference Voltage",
     "interne referenzspannung": "Reference Voltage",
- 
     "eingangsvorstrom": "Input Bias Current",
     "eingangsruhestrom": "Input Bias Current",
- 
     "eingangsoffsetspannung": "Input Offset Voltage",
     "offsetspannung": "Input Offset Voltage",
- 
     "anzahl kanäle": "Number of Channels",
     "anzahl kanaele": "Number of Channels",
     "kanalanzahl": "Number of Channels",
     "kanäle": "Number of Channels",
     "kanaele": "Number of Channels",
- 
     "anzahl ausgänge": "Number of Outputs",
     "anzahl ausgaenge": "Number of Outputs",
     "ausgänge": "Number of Outputs",
     "ausgaenge": "Number of Outputs",
- 
     # ════════════════════════════════════════════════════════════════
     # Elektromechanik & Mechanik
     # ════════════════════════════════════════════════════════════════
@@ -609,101 +551,80 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "schaltkontakt": "Circuit / Contact Form",
     "schaltbild": "Circuit / Contact Form",
     "polzahl und schaltstellungen": "Circuit / Contact Form",
- 
     "kontaktbelastbarkeit": "Contact Rating",
     "kontaktstrom": "Contact Rating",
     "schaltleistung": "Contact Rating",
     "max. kontaktstrom": "Contact Rating",
- 
     "kontaktwiderstand": "Contact Resistance",
     "max. kontaktwiderstand": "Contact Resistance",
     "übergangswiderstand": "Contact Resistance",
     "uebergangswiderstand": "Contact Resistance",
- 
     "isolationswiderstand": "Insulation Resistance",
     "min. isolationswiderstand": "Insulation Resistance",
     "isolierwiderstand": "Insulation Resistance",
- 
     "durchschlagfestigkeit": "Dielectric Strength",
     "spannungsfestigkeit (isolation)": "Dielectric Strength",
     "prüfspannung": "Dielectric Strength",
     "pruefspannung": "Dielectric Strength",
- 
     "betätigungsart": "Actuator Type",
     "betaetigungsart": "Actuator Type",
     "schalterbetätigung": "Actuator Type",
     "schalterbetaetigung": "Actuator Type",
     "betätigungselement": "Actuator Type",
- 
     "beleuchtung": "Illumination",
     "hintergrundbeleuchtung": "Illumination",
     "beleuchtungsart": "Illumination",
     "beleuchtet": "Illumination",
- 
     "spulenspannung": "Coil Voltage",
     "relaisspulenspannung": "Coil Voltage",
     "spulennennspannung": "Coil Voltage",
- 
     "spulenwiderstand": "Coil Resistance",
     "relaisspulenwiderstand": "Coil Resistance",
- 
     "spulenleistung": "Coil Power",
     "spulenleistungsaufnahme": "Coil Power",
- 
     "kontaktmaterial": "Contact Material",
     "relaiskontaktmaterial": "Contact Material",
     "kontaktbeschichtung": "Contact Material",
- 
     "reihenanzahl": "Row Count",
     "anzahl reihen": "Row Count",
     "reihen": "Row Count",
- 
     "raster": "Pitch",
     "rastermaß": "Pitch",
     "rastermass": "Pitch",
     "kontaktabstand": "Pitch",
     "pinabstand": "Pitch",
     "polabstand": "Pitch",
- 
     "geschlecht": "Gender / Type",
     "steckertyp": "Gender / Type",
     "kontakttyp": "Gender / Type",
     "stecker/buchse": "Gender / Type",
     "stecker / buchse": "Gender / Type",
- 
     "montageausrichtung": "Mounting Orientation",
     "einbaulage": "Mounting Orientation",
     "montagewinkel": "Mounting Orientation",
     "gerade/gewinkelt": "Mounting Orientation",
- 
     "luftstrom": "Fan Airflow",
     "förderleistung": "Fan Airflow",
     "foerderleistung": "Fan Airflow",
     "luftdurchsatz": "Fan Airflow",
- 
     "lüfterdrehzahl": "Fan Speed",
     "luefterdrehzahl": "Fan Speed",
     "drehzahl": "Fan Speed",
     "nenndrehzahl": "Fan Speed",
- 
     "statischer druck": "Fan Static Pressure",
     "förderdruck": "Fan Static Pressure",
     "foerderdruck": "Fan Static Pressure",
- 
     "lüftergeräusch": "Fan Noise",
     "lueftergeraeusch": "Fan Noise",
     "geräuschpegel": "Fan Noise",
     "geraeuschpegel": "Fan Noise",
     "schalldruckpegel": "Fan Noise",
- 
     "lagertyp": "Fan Bearing Type",
     "lagerart": "Fan Bearing Type",
     "lager": "Fan Bearing Type",
- 
     "lüfternennspannung": "Fan Rated Voltage",
     "luefternennspannung": "Fan Rated Voltage",
     "lüfter betriebsspannung": "Fan Rated Voltage",
- 
     # ════════════════════════════════════════════════════════════════
     # Allgemein & Umgebungsbedingungen
     # ════════════════════════════════════════════════════════════════
@@ -715,14 +636,12 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "minimale betriebstemperatur": "Operating Temperature",
     "maximale betriebstemperatur": "Operating Temperature",
     "einsatztemperaturbereich": "Operating Temperature",
- 
     "lagertemperatur": "Storage Temperature",
     "lagertemperaturbereich": "Storage Temperature",
     "lagertemperatur min.": "Storage Temperature",
     "lagertemperatur max.": "Storage Temperature",
     "minimale lagertemperatur": "Storage Temperature",
     "maximale lagertemperatur": "Storage Temperature",
- 
     "gehäuse": "Package / Case",
     "gehaeuse": "Package / Case",
     "gehäuseform": "Package / Case",
@@ -732,83 +651,67 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "bauform": "Package / Case",
     "verpackung": "Package / Case",
     "bauteilgehäuse": "Package / Case",
- 
     "anschlussart (termination)": "Termination Style",
     "terminierung": "Termination Style",
     "anschlussweise": "Termination Style",
     "anschlusstechnik": "Termination Style",
- 
     "feuchteempfindlichkeitsstufe": "Moisture Sensitivity Level (MSL)",
     "feuchteempfindlichkeitsklasse": "Moisture Sensitivity Level (MSL)",
     "msl": "Moisture Sensitivity Level (MSL)",
     "msl-stufe": "Moisture Sensitivity Level (MSL)",
- 
     "rohs-status": "RoHS Status",
     "rohs-konform": "RoHS Status",
     "rohs konform": "RoHS Status",
     "rohs": "RoHS Status",
- 
     "bleifrei": "Lead-Free Status",
     "bleifrei-status": "Lead-Free Status",
     "bleifreier status": "Lead-Free Status",
- 
     "halogenfrei": "Halogen-Free Status",
     "halogenfrei-status": "Halogen-Free Status",
     "halogenfreier status": "Halogen-Free Status",
- 
     "breite": "Physical Width",
     "baubreite": "Physical Width",
- 
     "länge": "Physical Length",
     "laenge": "Physical Length",
     "baulänge": "Physical Length",
     "baulaenge": "Physical Length",
- 
     "höhe": "Physical Height",
     "hoehe": "Physical Height",
     "bauhöhe": "Physical Height",
     "bauhoehe": "Physical Height",
     "max. höhe": "Physical Height",
     "max. hoehe": "Physical Height",
- 
     "gewicht": "Weight",
     "eigengewicht": "Weight",
     "stückgewicht": "Weight",
     "stueckgewicht": "Weight",
- 
     "farbe": "Color",
     "led-farbe": "Color",
     "gehäusefarbe": "Color",
- 
     "material": "Material",
     "gehäusematerial": "Material",
     "gehaeusematerial": "Material",
     "werkstoff": "Material",
     "körpermaterial": "Material",
     "koerpermaterial": "Material",
- 
     "befestigungslochdurchmesser": "Mounting Hole Diameter",
     "bohrungsdurchmesser": "Mounting Hole Diameter",
     "montagebohrung": "Mounting Hole Diameter",
- 
     # ════════════════════════════════════════════════════════════════
     # NEU: Kategorien, die im Original fehlten, bei Distributoren aber
     # (v.a. bei Facettensuche/Attributlisten von RS, Farnell, Digi-Key)
     # regelmäßig als eigenes Attribut auftauchen.
     # ════════════════════════════════════════════════════════════════
- 
     "produktart": "Product Type",
     "produkttyp": "Product Type",
     "bauteiltyp": "Product Type",
     "warengruppe": "Product Type",
     "kategorie": "Product Type",
- 
     "verpackungsart": "Packaging Type",
     "lieferform": "Packaging Type",
     "verpackungsform": "Packaging Type",
     "gurtung": "Packaging Type",
     "bandware": "Packaging Type",
- 
     "normen/zulassungen": "Standards / Approvals",
     "normen / zulassungen": "Standards / Approvals",
     "zulassungen": "Standards / Approvals",
@@ -817,57 +720,45 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "zertifikate": "Standards / Approvals",
     "konformität": "Standards / Approvals",
     "konformitaet": "Standards / Approvals",
- 
     "automobilstandard": "Automotive Qualification",
     "automotive qualifiziert": "Automotive Qualification",
     "aec-q qualifiziert": "Automotive Qualification",
     "automobiltauglich": "Automotive Qualification",
     "kfz-qualifiziert": "Automotive Qualification",
- 
     "anschlussdurchmesser": "Lead Diameter",
     "drahtdurchmesser": "Lead Diameter",
     "anschlussdrahtdurchmesser": "Lead Diameter",
     "beindurchmesser": "Lead Diameter",
- 
     "serie": "Series",
     "produktserie": "Series",
     "produktfamilie": "Series",
     "baureihe": "Series",
- 
     "hersteller": "Manufacturer",
     "herstellername": "Manufacturer",
     "marke": "Manufacturer",
- 
     "herstellernummer": "Manufacturer Part Number",
     "hersteller-teilenummer": "Manufacturer Part Number",
     "hersteller-artikelnummer": "Manufacturer Part Number",
     "mpn": "Manufacturer Part Number",
- 
     "lebenszyklusstatus": "Lifecycle Status",
     "produktstatus": "Lifecycle Status",
     "verfügbarkeitsstatus": "Lifecycle Status",
     "verfuegbarkeitsstatus": "Lifecycle Status",
- 
     "mindestbestellmenge": "Minimum Order Quantity",
     "mindestabnahmemenge": "Minimum Order Quantity",
     "mbm": "Minimum Order Quantity",
     "moq": "Minimum Order Quantity",
- 
     "verpackungseinheit": "Order Multiple",
     "staffelmenge": "Order Multiple",
     "bestellmengenvielfaches": "Order Multiple",
- 
     "lieferzeit": "Lead Time",
     "lieferfrist": "Lead Time",
- 
     "datenblatt": "Datasheet URL",
     "datenblatt-url": "Datasheet URL",
     "datenblattlink": "Datasheet URL",
- 
     "produktbeschreibung": "Part Description",
     "artikelbeschreibung": "Part Description",
     "beschreibung": "Part Description",
- 
     "verfügbarkeit": "Availability",
     "verfuegbarkeit": "Availability",
     "lagerbestand": "Availability",
@@ -1285,8 +1176,12 @@ def fuzzy_match_category(
         # child; if that fails, force manual selection (return None).
         if best_match.get("structural"):
             resolved = _resolve_non_structural_child(
-                best_match, categories, synonyms,
-                dist_tokens_flat, dist_leaf_tokens, threshold
+                best_match,
+                categories,
+                synonyms,
+                dist_tokens_flat,
+                dist_leaf_tokens,
+                threshold,
             )
             if resolved:
                 logger.info(
@@ -1354,7 +1249,8 @@ def _resolve_non_structural_child(
 
     # Direct children of the structural category that are themselves not structural
     children = [
-        c for c in all_categories
+        c
+        for c in all_categories
         if c.get("_parent_id") == parent_id and not c.get("structural", False)
     ]
 
@@ -1367,7 +1263,9 @@ def _resolve_non_structural_child(
     for child in children:
         inv_parts = child["path_parts"]
         inv_tokens_flat = _tokenise(" ".join(inv_parts), synonyms)
-        inv_leaf_tokens = _tokenise(inv_parts[-1] if inv_parts else child["name"], synonyms)
+        inv_leaf_tokens = _tokenise(
+            inv_parts[-1] if inv_parts else child["name"], synonyms
+        )
 
         sig_path = _dice(dist_tokens_flat, inv_tokens_flat)
         sig_leaf = _dice(dist_leaf_tokens, inv_leaf_tokens)
