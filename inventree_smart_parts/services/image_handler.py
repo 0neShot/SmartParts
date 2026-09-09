@@ -77,6 +77,12 @@ class ImageResult:
 _MINIMAL_UA_HOSTS = {"www.mouser.com", "mouser.com", "eu.mouser.com", "www.mouser.de"}
 
 
+def _is_minimal_ua_host(host: str) -> bool:
+    """Return True if host is known to block full browser UAs (e.g. Mouser/Akamai)."""
+    h = host.lower()
+    return "mouser." in h or h in _MINIMAL_UA_HOSTS
+
+
 def _make_session(minimal: bool = False) -> requests.Session:
     """Create a requests session with retry strategy.
 
@@ -157,7 +163,7 @@ def download_image(url: str) -> Tuple[Optional[bytes], str, str]:
     host = parsed.netloc.lower()
 
     # Choose strategy: Mouser/Akamai needs minimal headers
-    use_minimal = host in _MINIMAL_UA_HOSTS
+    use_minimal = _is_minimal_ua_host(host)
     session = _make_session(minimal=use_minimal)
 
     if not use_minimal:
@@ -207,11 +213,13 @@ def download_image(url: str) -> Tuple[Optional[bytes], str, str]:
         detected_ext = _detect_ext_from_magic(data)
         if detected_ext:
             ext = detected_ext  # trust magic bytes over Content-Type
-        elif not ext:
-            # Content-Type was HTML (bot challenge page) – try alternate strategy
+        elif ext == ".svg" and (b"<svg" in data.lower() or b"<?xml" in data.lower()):
+            ext = ".svg"
+        else:
+            # Body is not a recognized image (likely bot-challenge HTML or error)
             if not use_minimal:
                 logger.debug(
-                    f"Browser UA returned HTML for {host}, retrying with minimal UA"
+                    f"No valid image magic bytes for {host}, retrying with minimal UA"
                 )
                 return _download_with_minimal_ua(url)
             return None, "", f"Unrecognized image format (content-type: {ct})"
@@ -263,7 +271,9 @@ def _download_with_minimal_ua(url: str) -> Tuple[Optional[bytes], str, str]:
         detected_ext = _detect_ext_from_magic(data)
         if detected_ext:
             ext = detected_ext
-        elif not ext:
+        elif ext == ".svg" and (b"<svg" in data.lower() or b"<?xml" in data.lower()):
+            ext = ".svg"
+        else:
             return (
                 None,
                 "",

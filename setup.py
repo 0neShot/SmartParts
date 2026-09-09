@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="inventree-smart-parts",
-    version="1.1.1",
+    version="1.2.0",
     author="0neShot",
     description="Intelligent inventory assistant for InvenTree that automates part creation from MPN lookup.",
     long_description=long_description,

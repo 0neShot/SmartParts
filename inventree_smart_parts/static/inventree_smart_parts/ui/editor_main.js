@@ -58,6 +58,7 @@ function doSearch(e) {
 /* ── Results router ────────────────────────────────────────────── */
 function renderResults(data) {
   _searchData  = data;
+  window._searchData = data;
   _existingData = null;
 
   if (!data.merged) {
@@ -138,6 +139,8 @@ function renderEditor(data, existing) {
   // Store for the save payload so the backend can learn from corrections
   window._editorDistributorCategory  = data.category_match?.distributor_category || '';
   window._editorSuggestedCategoryId  = data.category_match?.id || null;
+  // Whether backend parameter filtering is active (injected from search response)
+  window._limitParamsToCategory      = !!(data.limit_parameters_to_category);
 
   /* ── Assemble ─────────────────────────────────────────────── */
   const html = `
@@ -184,7 +187,7 @@ function renderEditor(data, existing) {
       <!-- Parameters -->
       <div class="sp-editor-section">
         <p class="sp-section-title">Parameters</p>
-        ${buildParamsTable(paramRows)}
+        ${buildParamsTable(paramRows, m.excluded_parameters || [])}
       </div>
 
       <!-- Suppliers -->
@@ -227,6 +230,13 @@ function renderEditor(data, existing) {
   // Kick off async data loading for the new stock/label dropdowns
   loadStockLocations();
   loadLabelTemplates();
+
+  // If LIMIT_PARAMETERS_TO_CATEGORY is active: gate parameters immediately
+  // based on whatever category was auto-resolved (or show the prompt if none).
+  if (window._limitParamsToCategory) {
+    const initCatId = catId ? parseInt(catId) : null;
+    loadCategoryParameters(initCatId);
+  }
 
   // Show label section if receive checkbox starts checked
   const enableCb = document.getElementById('enableReceive');
@@ -316,7 +326,8 @@ function collectFormData() {
     const name  = inputs[0]?.value.trim();
     const value = inputs[1]?.value.trim();
     const unit  = inputs[2]?.value.trim() || '';
-    if (name && value) params.push({ name, value, unit });
+    const isManual = tr.getAttribute('data-manual') === 'true';
+    if (name && value) params.push({ name, value, unit, manual: isManual });
   });
 
   /* Suppliers */

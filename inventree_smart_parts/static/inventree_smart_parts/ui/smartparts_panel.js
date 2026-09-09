@@ -6,11 +6,18 @@
  * rendered inline for full compatibility.
  */
 
+import './scanner_global.js';
+
 export function renderSmartPartsPanel(target, context) {
     if (!target) {
         console.warn('SmartParts: Panel target is null, aborting render.');
         return;
     }
+
+    if (typeof window !== 'undefined') {
+        window.SMARTPARTS_ACTIVE_PANEL = true;
+    }
+    target.setAttribute('data-smartparts-panel', 'true');
 
     const PLUGIN_API = '/plugin/smartparts/api/search/';
     const CREATE_API = '/plugin/smartparts/create/';
@@ -112,6 +119,25 @@ export function renderSmartPartsPanel(target, context) {
         .then(data => renderResults(data))
         .catch(err => showStatus('❌ Search failed: ' + err.message, 'error'))
         .finally(() => { if (btn) btn.disabled = false; });
+    }
+
+    if (typeof window !== 'undefined') {
+        window._smartparts_panel_search = doSearch;
+    }
+
+    if (typeof MutationObserver !== 'undefined' && target.parentNode) {
+        const observer = new MutationObserver(() => {
+            if (!document.body.contains(target)) {
+                if (typeof window !== 'undefined') {
+                    window.SMARTPARTS_ACTIVE_PANEL = false;
+                    if (window._smartparts_panel_search === doSearch) {
+                        delete window._smartparts_panel_search;
+                    }
+                }
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
     }
 
     function renderResults(data) {

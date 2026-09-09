@@ -48,6 +48,7 @@ class PartParameter:
     name: str
     value: str
     unit: str = ""
+    manual: bool = False
 
 
 @dataclass

@@ -64,10 +64,14 @@ function mergeParams(apiParams, dbParams) {
 }
 
 function buildParamRow(p) {
+  const isManual = Boolean(p.manual);
   let rowCls = 'sp-param-row', badge = '', note = '';
-  if (p.status === 'new' || p.manual) {
+  if (isManual) {
+    rowCls += ' sp-param-new sp-param-manual';
+    badge = '<span class="sp-badge sp-badge-new">MANUAL</span>';
+  } else if (p.status === 'new') {
     rowCls += ' sp-param-new';
-    badge = `<span class="sp-badge sp-badge-new">${p.manual ? 'MANUAL' : '⚡ NEW'}</span>`;
+    badge = '<span class="sp-badge sp-badge-new">⚡ NEW</span>';
   } else if (p.status === 'changed') {
     rowCls += ' sp-param-changed';
     badge = '<span class="sp-badge sp-badge-warn">⚠ changed</span>';
@@ -75,9 +79,9 @@ function buildParamRow(p) {
   } else if (p.status === 'db_only') {
     badge = '<span class="sp-badge sp-badge-db">DB</span>';
   }
-  const nameRo = (!p.manual && p.status !== 'new') ? 'readonly' : '';
+  const nameRo = (!isManual && p.status !== 'new') ? 'readonly' : '';
   const valCls = p.status === 'changed' ? 'sp-param-input changed' : 'sp-param-input';
-  return `<tr class="${rowCls}">
+  return `<tr class="${rowCls}" data-manual="${isManual ? 'true' : 'false'}" data-status="${escHtml(p.status || '')}">
     <td><button type="button" class="sp-del-btn" onclick="delParamRow(this)" title="Delete">×</button></td>
     <td><input type="text" class="sp-param-input" value="${escHtml(p.name)}" ${nameRo} placeholder="Name"></td>
     <td><input type="text" class="${valCls}" value="${escHtml(p.value)}" placeholder="Value">${note}</td>
@@ -86,8 +90,16 @@ function buildParamRow(p) {
   </tr>`;
 }
 
-function buildParamsTable(rows) {
+function buildParamsTable(rows, dropped = []) {
   const body = rows.map(buildParamRow).join('');
+  let dropHtml = '';
+  if (dropped && dropped.length > 0) {
+    const names = dropped.map(d => escHtml(d.supplier_key || d.name || '')).join(', ');
+    dropHtml = `
+      <p id="sp-dropped-badge" style="font-size:.8rem;color:var(--sp-text-muted,#888);margin:.4rem 0">
+        <i class="fas fa-filter"></i> ${dropped.length} parameter(s) excluded by category filter: ${names}
+      </p>`;
+  }
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem">
       <strong>Parameters</strong>
@@ -101,7 +113,8 @@ function buildParamsTable(rows) {
         <th style="width:80px">Unit</th><th style="width:110px"></th>
       </tr></thead>
       <tbody id="paramTbody">${body}</tbody>
-    </table>`;
+    </table>
+    ${dropHtml}`;
 }
 
 /* ── Supplier helpers ──────────────────────────────────────────── */
@@ -218,9 +231,179 @@ function buildCategorySelect(categories, selectedId) {
   let opts = '<option value="">-- Select Category --</option>';
   (categories || []).forEach(c => {
     const sel = (c.id === selectedId) ? 'selected' : '';
-    opts += `<option value="${c.id}" ${sel}>${escHtml(c.name)}</option>`;
+    if (c.structural) {
+      // Structural categories cannot hold parts; render as a disabled group header.
+      opts += `<option value="${c.id}" disabled
+                       style="color:var(--sp-text-muted,#888);font-style:italic;padding-left:.5rem"
+                       title="Structural category – cannot hold parts">
+               🔒 ${escHtml(c.name)}</option>`;
+    } else {
+      opts += `<option value="${c.id}" ${sel}>${escHtml(c.name)}</option>`;
+    }
   });
-  return `<select id="categorySelect" class="sp-input">${opts}</select>`;
+  return `<select id="categorySelect" class="sp-input"
+                  onchange="onCategoryChange(this)">${opts}</select>`;
+}
+
+/* ── Category change handler: gate parameters on category selection ── */
+function onCategoryChange(sel) {
+  // If LIMIT_PARAMETERS_TO_CATEGORY is not active, skip gating.
+  // The flag is injected by the backend into window._limitParamsToCategory.
+  if (!window._limitParamsToCategory) return;
+
+  const catId = parseInt(sel.value) || null;
+  loadCategoryParameters(catId);
+}
+
+/**
+ * Fetch allowed parameters for catId from the backend and update the
+ * parameter section.  When catId is null/empty: hide the param table
+ * and show a notice. When catId resolves: re-render only allowed params.
+ */
+function loadCategoryParameters(catId) {
+  const paramSection = document.querySelector('.sp-editor-section #paramTbody')?.closest('.sp-editor-section');
+  if (!paramSection) return;
+
+  if (!catId) {
+    // No valid category – hide table, show prompt
+    const existing = paramSection.querySelector('#paramTbody');
+    if (existing) existing.closest('table')?.parentElement && (existing.closest('table').style.display = 'none');
+    let notice = paramSection.querySelector('#sp-cat-param-notice');
+    if (!notice) {
+      notice = document.createElement('p');
+      notice.id = 'sp-cat-param-notice';
+      notice.style.cssText = 'color:var(--sp-warning,#f59e0b);font-size:.85rem;margin:.5rem 0';
+      paramSection.appendChild(notice);
+    }
+    notice.textContent = 'Select a valid category to display applicable parameters.';
+    const dropBadge = paramSection.querySelector('#sp-dropped-badge');
+    if (dropBadge) dropBadge.remove();
+    return;
+  }
+
+  // Remove notice if present
+  const notice = paramSection.querySelector('#sp-cat-param-notice');
+  if (notice) notice.remove();
+
+  // 1. Collect ONLY user-added manual rows (data-manual="true") and pre-existing DB rows
+  const manualRows = [];
+  const dbRows = [];
+  const currentValues = {};
+
+  document.querySelectorAll('#paramTbody tr').forEach(tr => {
+    const inputs = tr.querySelectorAll('input');
+    const name  = inputs[0]?.value.trim();
+    const value = inputs[1]?.value.trim();
+    const unit  = inputs[2]?.value.trim() || '';
+    const isManual = tr.getAttribute('data-manual') === 'true';
+    const status = tr.getAttribute('data-status');
+
+    if (isManual && name) {
+      manualRows.push({
+        name,
+        value,
+        unit,
+        status: 'new',
+        dbVal: null,
+        manual: true,
+      });
+    } else if (status === 'db_only' && name) {
+      dbRows.push({
+        name,
+        value,
+        unit,
+        status: 'db_only',
+        dbVal: null,
+        manual: false,
+      });
+    } else if (name) {
+      currentValues[name.toLowerCase()] = { value, unit };
+    }
+  });
+
+  // 2. Prepare attributes to filter from full distributor data
+  const distributorAttrs = (window._searchData?.merged?.all_parameters || window._searchData?.merged?.parameters || []);
+  const attrsToSend = distributorAttrs.length > 0
+    ? distributorAttrs.map(attr => {
+        const edited = currentValues[attr.name.toLowerCase()];
+        return {
+          name: attr.name,
+          value: edited ? edited.value : attr.value,
+          unit: edited ? edited.unit : (attr.unit || ''),
+        };
+      })
+    : Object.keys(currentValues).map(k => ({
+        name: k,
+        value: currentValues[k].value,
+        unit: currentValues[k].unit,
+      }));
+
+  fetch('api/category/parameters/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCookie('csrftoken') },
+    body: JSON.stringify({ category_id: catId, attributes: attrsToSend }),
+  })
+  .then(r => r.ok ? r.json() : Promise.reject(`HTTP ${r.status}`))
+  .then(data => {
+    if (data.structural) {
+      // Structural category slipped through – show warning, do not update
+      let notice2 = paramSection.querySelector('#sp-cat-param-notice');
+      if (!notice2) {
+        notice2 = document.createElement('p');
+        notice2.id = 'sp-cat-param-notice';
+        notice2.style.cssText = 'color:var(--sp-danger,#ef4444);font-size:.85rem;margin:.5rem 0';
+        paramSection.appendChild(notice2);
+      }
+      notice2.textContent = '⚠️ This is a structural (group) category and cannot hold parts. Please select a sub-category.';
+      return;
+    }
+
+    // Re-render parameter table with accepted parameters only
+    const accepted = data.accepted_parameters || [];
+    const dropped  = data.dropped_parameters  || [];
+
+    const tbody = document.getElementById('paramTbody');
+    if (!tbody) return;
+
+    // Accepted rows from the category filter (distributor parameters)
+    const acceptedRows = accepted.map(p => ({
+      name: p.name,
+      value: p.value,
+      unit: p.unit || '',
+      status: 'new',
+      dbVal: null,
+      manual: false,
+    }));
+
+    // Merge: accepted API rows + existing DB rows + user manual rows
+    const mergedRows = [
+      ...acceptedRows,
+      ...dbRows,
+      ...manualRows,
+    ];
+
+    tbody.innerHTML = mergedRows.map(buildParamRow).join('');
+
+    // Show the table in case it was hidden
+    const tbl = tbody.closest('table');
+    if (tbl) tbl.style.display = '';
+
+    // Dropped summary badge
+    let dropBadge = paramSection.querySelector('#sp-dropped-badge');
+    if (dropped.length > 0) {
+      if (!dropBadge) {
+        dropBadge = document.createElement('p');
+        dropBadge.id = 'sp-dropped-badge';
+        dropBadge.style.cssText = 'font-size:.8rem;color:var(--sp-text-muted,#888);margin:.4rem 0';
+        paramSection.querySelector('.sp-param-table')?.insertAdjacentElement('afterend', dropBadge);
+      }
+      const names = dropped.map(d => escHtml(d.supplier_key || d.name || '')).join(', ');
+      dropBadge.innerHTML = `<i class="fas fa-filter"></i> ${dropped.length} parameter(s) excluded by category filter: ${names}`;
+    } else if (dropBadge) {
+      dropBadge.remove();
+    }
+  })
+  .catch(err => console.warn('SmartParts: loadCategoryParameters failed:', err));
 }
 
 /* ── Receive Stock section ─────────────────────────────────────── */

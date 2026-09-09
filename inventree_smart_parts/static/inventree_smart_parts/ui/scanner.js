@@ -55,7 +55,7 @@
 
   // A DataMatrix barcode starts with [)> (sometimes with leading \x05\x06)
   // followed by a two-digit format code (05 or 06) then the record separator.
-  const ANSI_HEADER_RE = /(?:\x05\x06)?\[>\x1e?(?:05|06)\x1d?/;
+  const ANSI_HEADER_RE = /(?:\x05\x06)?\[\)?>(?:\x1e)?(?:05|06)(?:\x1d)?/;
 
   // Looser "looks like 2D" heuristic used when the header has been stripped
   // but field separators are still present.
@@ -357,8 +357,100 @@
   //  Stage 3 – Graceful fallback
   // ────────────────────────────────────────────────────────────────────────────
 
+  // ── Native InvenTree Model Route Registry ─────────────────────────────────
+  function normalizeModelKey(key) {
+    if (!key || typeof key !== 'string') return '';
+    return key.toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  const NATIVE_MODEL_ROUTES = {
+    // Orders & Manufacturing
+    purchaseorder: { route: '/web/purchasing/purchase-order/', label: 'Purchase Order', model: 'purchaseorder' },
+    build: { route: '/web/manufacturing/build-order/', label: 'Build Order', model: 'build' },
+    buildorder: { route: '/web/manufacturing/build-order/', label: 'Build Order', model: 'build' },
+    salesorder: { route: '/web/sales/sales-order/', label: 'Sales Order', model: 'salesorder' },
+    returnorder: { route: '/web/sales/return-order/', label: 'Return Order', model: 'returnorder' },
+    salesordershipment: { route: '/web/sales/sales-order/', label: 'Sales Order Shipment', model: 'salesordershipment' },
+    shipment: { route: '/web/sales/sales-order/', label: 'Sales Order Shipment', model: 'salesordershipment' },
+
+    // Parts & Companies
+    supplierpart: { route: '/web/purchasing/supplier-part/', label: 'Supplier Part', model: 'supplierpart' },
+    manufacturerpart: { route: '/web/part/manufacturer-part/', label: 'Manufacturer Part', model: 'manufacturerpart' },
+    part: { route: '/web/part/', label: 'Part', model: 'part' },
+
+    // Stock
+    stocklocation: { route: '/web/stock/location/', label: 'Stock Location', model: 'stocklocation' },
+    location: { route: '/web/stock/location/', label: 'Stock Location', model: 'stocklocation' },
+    stockitem: { route: '/web/stock/item/', label: 'Stock Item', model: 'stockitem' },
+    item: { route: '/web/stock/item/', label: 'Stock Item', model: 'stockitem' },
+  };
+
+  /**
+   * Classify barcode payload into native internal routes or distributor DataMatrix.
+   */
+  function classifyBarcode(raw) {
+    if (!raw) return { type: 'unknown' };
+    const trimmed = raw.trim();
+
+    // 1. Detect JSON format: {"purchaseorder": 12}, {"build": 7}, {"stocklocation": 5}, etc.
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      try {
+        const obj = JSON.parse(trimmed);
+        if (obj && typeof obj === 'object') {
+          for (const rawKey of Object.keys(obj)) {
+            const normKey = normalizeModelKey(rawKey);
+            const routeDef = NATIVE_MODEL_ROUTES[normKey];
+            if (routeDef) {
+              const val = obj[rawKey];
+              let id = null;
+              if (typeof val === 'number' || typeof val === 'string') {
+                id = parseInt(val, 10);
+              } else if (val && typeof val === 'object') {
+                id = parseInt(val.pk || val.id, 10);
+              }
+              if (!isNaN(id) && id > 0) {
+                return {
+                  type: 'native_' + routeDef.model,
+                  model: routeDef.model,
+                  label: routeDef.label,
+                  id: id,
+                  url: `${routeDef.route}${id}/`,
+                  raw: trimmed,
+                };
+              }
+              return { type: 'native_invalid_json', raw: trimmed, model: routeDef.model };
+            }
+          }
+          return { type: 'native_json_unknown', raw: trimmed };
+        }
+      } catch (e) {
+        return { type: 'malformed_json', raw: trimmed };
+      }
+    }
+
+    // 2. Detect Distributor 2D DataMatrix (e.g. [)>06..., [)>05...)
+    if (ANSI_HEADER_RE.test(trimmed) || trimmed.startsWith('[)>') || trimmed.includes('[)>')) {
+      return { type: 'distributor_datamatrix', raw: trimmed };
+    }
+
+    // 3. InvenTree Short Codes (INV-...)
+    if (trimmed.startsWith('INV-') || /^[A-Za-z0-9]{2,6}-([0-9A-Za-z$%*+.\/:]{2})(\d+)$/.test(trimmed)) {
+      return { type: 'possible_short_code', raw: trimmed };
+    }
+
+    return { type: 'clean_string', raw: trimmed };
+  }
+
   function _fallbackParse(raw, result) {
     const cleaned = raw.replace(/[\x00-\x1f\x7f]+/g, '').trim();
+    if ((cleaned.startsWith('{') && cleaned.endsWith('}')) || cleaned.startsWith('INV-')) {
+      result.source = 'native_internal';
+      const classification = classifyBarcode(cleaned);
+      if (classification && classification.url) {
+        result.nativeObject = classification;
+      }
+      return;
+    }
     if (cleaned) {
       result.mpn    = cleaned;
       result.source = 'fallback';
@@ -432,7 +524,71 @@
   let _lastTime = 0;
   let _callback = null;
 
+  function isSmartPartsActive() {
+    if (typeof window === 'undefined') return false;
+
+    if (
+      window.SMARTPARTS_ACTIVE_PANEL === true ||
+      window._smartparts_active === true ||
+      window.SmartPartsActive === true ||
+      window._smartparts_local_scanner_active === true
+    ) {
+      return true;
+    }
+
+    try {
+      const loc = window.location;
+      const pathname = (loc.pathname || '').toLowerCase();
+      const hash = (loc.hash || '').toLowerCase();
+      const search = (loc.search || '').toLowerCase();
+
+      if (
+        pathname.includes('/smartparts') ||
+        pathname.includes('/plugin/smartparts') ||
+        pathname.includes('smartparts-panel') ||
+        pathname.includes('/purescan') ||
+        hash.includes('smartparts') ||
+        search.includes('smartparts')
+      ) {
+        return true;
+      }
+    } catch (_) {}
+
+    if (typeof document !== 'undefined') {
+      try {
+        if (
+          document.querySelector('#sp-root') ||
+          document.querySelector('#smartparts-root') ||
+          document.querySelector('[data-smartparts-panel]') ||
+          document.querySelector('.smartparts-panel') ||
+          document.querySelector('#searchForm') ||
+          document.querySelector('#mpnInput') ||
+          document.querySelector('#purescan-app') ||
+          document.querySelector('.purescan-container') ||
+          document.querySelector('#purescan-input')
+        ) {
+          return true;
+        }
+
+        const ae = document.activeElement;
+        if (ae && ae.closest && ae.closest('#sp-root, [data-smartparts-panel], #searchForm, #smartparts-root')) {
+          return true;
+        }
+      } catch (_) {}
+    }
+
+    return false;
+  }
+
   function _onKey(e) {
+    if (typeof window !== 'undefined' && window.location.pathname && window.location.pathname.includes('/purescan')) {
+      return;
+    }
+
+    try {
+      e._handledBySmartParts = true;
+    } catch (_) {}
+
     const now   = Date.now();
     const delta = now - _lastTime;
     _lastTime   = now;
@@ -469,6 +625,13 @@
           }
         }
 
+        // ── 1. Check for native InvenTree internal routes ──
+        const classification = classifyBarcode(captured);
+        if (classification.url) {
+          navigateToRoute(classification.url, classification.label, classification.id);
+          return;
+        }
+
         if (_callback) _callback(captured, parse(captured));
       }
       return;
@@ -487,8 +650,170 @@
     _times.push(now);
   }
 
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function showToast(message, type = 'info', duration = 3000) {
+    if (typeof document === 'undefined') return;
+    let container = document.getElementById('sp-scanner-toast-container');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'sp-scanner-toast-container';
+      container.style.cssText = `
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 100000;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        pointer-events: none;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      `;
+      document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    const bgColor = type === 'success' ? '#10b981' : type === 'warning' ? '#f59e0b' : '#3b82f6';
+    toast.style.cssText = `
+      background: ${bgColor};
+      color: #ffffff;
+      padding: 12px 18px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      opacity: 0;
+      transform: translateY(10px);
+      transition: opacity 0.2s ease, transform 0.2s ease;
+      pointer-events: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    `;
+    toast.innerHTML = `<span>⚡</span><div>${escapeHtml(message)}</div>`;
+    container.appendChild(toast);
+
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateY(0)';
+      });
+    }
+
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(10px)';
+      setTimeout(() => {
+        if (toast.parentNode) toast.parentNode.removeChild(toast);
+      }, 200);
+    }, duration);
+  }
+
+  function navigateToRoute(targetUrl, label, id) {
+    if (!targetUrl) return;
+    const msg = label && id
+      ? `Navigating to ${label} #${id}...`
+      : `Navigating to ${label || 'object'}...`;
+    console.log(`SmartParts Scanner: ${msg} -> ${targetUrl}`);
+    showToast(`⚡ ${msg}`, 'success', 2500);
+
+    // Completely reset scan buffers to prevent duplicate triggers
+    _buffer = '';
+    _times = [];
+
+    setTimeout(() => {
+      if (typeof window !== 'undefined' && window.location) {
+        if (typeof window.location.assign === 'function') {
+          window.location.assign(targetUrl);
+        } else {
+          window.location.href = targetUrl;
+        }
+      }
+    }, 250);
+  }
+
+  function resolveNativeUrlFromApiResponse(data) {
+    if (!data || typeof data !== 'object') return null;
+
+    // 1. Direct top-level url / web_url
+    if (data.web_url || data.url) {
+      const directUrl = data.web_url || data.url;
+      let label = 'InvenTree Object';
+      let id = data.pk || data.id || null;
+      if (data.model) {
+        const normModel = normalizeModelKey(data.model);
+        if (NATIVE_MODEL_ROUTES[normModel]) {
+          label = NATIVE_MODEL_ROUTES[normModel].label;
+        }
+      }
+      return { url: directUrl, label: label, id: id };
+    }
+
+    // 2. Explicit model + pk pattern: { "model": "purchaseorder", "pk": 12 }
+    if (data.model && (data.pk !== undefined || data.id !== undefined)) {
+      const norm = normalizeModelKey(data.model);
+      const routeDef = NATIVE_MODEL_ROUTES[norm];
+      const pk = data.pk !== undefined ? data.pk : data.id;
+      if (routeDef && pk) {
+        return {
+          url: `${routeDef.route}${pk}/`,
+          label: routeDef.label,
+          id: pk,
+        };
+      }
+    }
+
+    // 3. Nested model key pattern: { "purchaseorder": { "pk": 12, ... } }
+    // or { "build": { "pk": 7, "web_url": "/web/manufacturing/build-order/7/" } }
+    for (const rawKey of Object.keys(data)) {
+      const norm = normalizeModelKey(rawKey);
+      const routeDef = NATIVE_MODEL_ROUTES[norm];
+      if (routeDef && data[rawKey] && typeof data[rawKey] === 'object') {
+        const obj = data[rawKey];
+        const pk = obj.pk !== undefined ? obj.pk : obj.id;
+        const url = obj.web_url || obj.url || (pk ? `${routeDef.route}${pk}/` : null);
+        if (url) {
+          const label = (obj.instance && (obj.instance.name || obj.instance.reference)) ||
+                        obj.reference ||
+                        obj.name ||
+                        routeDef.label;
+          return {
+            url: url,
+            label: label,
+            id: pk || null,
+          };
+        }
+      }
+    }
+
+    // 4. Fallback check for any object property containing web_url or url
+    for (const key of Object.keys(data)) {
+      const val = data[key];
+      if (val && typeof val === 'object' && (val.web_url || val.url)) {
+        return {
+          url: val.web_url || val.url,
+          label: key,
+          id: val.pk || val.id || null,
+        };
+      }
+    }
+
+    return null;
+  }
+
   function init(callback) {
     _callback = callback;
+    if (typeof window !== 'undefined') {
+      window._smartparts_local_scanner_active = true;
+    }
     document.addEventListener('keydown', _onKey, { capture: true });
   }
 
@@ -497,9 +822,36 @@
     _callback = null;
     _buffer   = '';
     _times    = [];
+    if (typeof window !== 'undefined') {
+      window._smartparts_local_scanner_active = false;
+    }
   }
 
   // ── Public API ─────────────────────────────────────────────────────────────
-  global.SmartPartsScanner = { init, destroy, parse };
+  global.SmartPartsScanner = {
+    init,
+    destroy,
+    parse,
+    classifyBarcode,
+    resolveNativeUrlFromApiResponse,
+    normalizeModelKey,
+    NATIVE_MODEL_ROUTES,
+    navigateToRoute,
+    isSmartPartsActive,
+  };
 
-})(window);
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+      init,
+      destroy,
+      parse,
+      classifyBarcode,
+      resolveNativeUrlFromApiResponse,
+      normalizeModelKey,
+      NATIVE_MODEL_ROUTES,
+      navigateToRoute,
+      isSmartPartsActive,
+    };
+  }
+
+})(typeof window !== 'undefined' ? window : globalThis);

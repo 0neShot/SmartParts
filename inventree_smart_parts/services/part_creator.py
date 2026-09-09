@@ -63,6 +63,8 @@ class CreationResult:
     supplier_parts_created: List[int] = field(default_factory=list)
     supplier_parts_existing: List[int] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
+    # Audit list of parameters excluded by LIMIT_PARAMETERS_TO_CATEGORY
+    dropped_parameters: List[Dict] = field(default_factory=list)
 
     # Legacy shim so existing call-sites that read .manufacturer_parts / .supplier_parts still work
     @property
@@ -109,6 +111,37 @@ def create_part_from_data(
             SupplierPart,
         )
         from django.db import transaction
+
+        # ── Pre-flight: reject structural categories immediately ───────────────
+        # InvenTree forbids assigning parts to structural (group-header)
+        # categories.  Catching the validation error after Part.save() and
+        # silently stripping the category is wrong - it creates orphaned
+        # parts.  Instead we refuse immediately with a clear error.
+        if category_id:
+            try:
+                _cat = PartCategory.objects.get(pk=category_id)
+                if getattr(_cat, "structural", False):
+                    result.success = False
+                    result.message = (
+                        f"Category '{_cat.name}' (id={category_id}) is structural "
+                        f"and cannot be assigned to parts. "
+                        f"Please select a non-structural (leaf) category."
+                    )
+                    result.errors.append(result.message)
+                    logger.warning(
+                        "create_part_from_data: refused structural category "
+                        "id=%s ('%s') for MPN '%s'",
+                        category_id, _cat.name, part_data.mpn,
+                    )
+                    return result
+            except PartCategory.DoesNotExist:
+                # Category gone between UI load and save; treat as uncategorized
+                logger.warning(
+                    "create_part_from_data: category_id=%s not found; "
+                    "proceeding uncategorized",
+                    category_id,
+                )
+                category_id = None
 
         with transaction.atomic():
             # ── Step 1: Get or create the Part ──
@@ -166,7 +199,12 @@ def create_part_from_data(
 
             # ── Step 4: Add Parameters ──
             if part_data.parameters:
-                _create_parameters(part, part_data.parameters)
+                dropped = _create_parameters(
+                    part,
+                    part_data.parameters,
+                    category_id=category_id,
+                )
+                result.dropped_parameters = dropped
 
             # ── Step 5: Media Import (Image & Datasheet) ──
             from .image_handler import auto_import_media, attach_datasheet_to_part
@@ -218,7 +256,14 @@ def create_part_from_data(
 
 
 def _create_new_part(data: PartData, category_id: Optional[int]) -> "Part":
-    """Create a new InvenTree Part."""
+    """Create a new InvenTree Part.
+
+    Uses ``full_clean()`` + ``save()`` instead of ``objects.create()`` so that
+    InvenTree model validation (e.g. structural-category rejection) raises a
+    ``ValidationError`` that propagates to the caller's ``transaction.atomic()``
+    block and triggers a full rollback.  There is no silent stripping of the
+    category on validation failure.
+    """
     from part.models import Part, PartCategory
 
     category = None
@@ -236,7 +281,7 @@ def _create_new_part(data: PartData, category_id: Optional[int]) -> "Part":
     if len(name) > 100:
         name = name[:97] + "..."
 
-    part = Part.objects.create(
+    part = Part(
         name=name,
         description=(
             data.description[:250]
@@ -251,6 +296,11 @@ def _create_new_part(data: PartData, category_id: Optional[int]) -> "Part":
         purchaseable=True,
         link=data.datasheet_url or "",
     )
+    # full_clean() runs Django model validators (including InvenTree's check
+    # that the category is not structural).  Any ValidationError raised here
+    # will propagate up through transaction.atomic() and roll back everything.
+    part.full_clean()
+    part.save()
 
     logger.info(f"Created Part: {part.name} (ID: {part.pk})")
     return part
@@ -619,18 +669,38 @@ def _get_or_create_company(
     return company
 
 
-def _create_parameters(part, parameters: List[Any]):
+def _create_parameters(
+    part,
+    parameters: List[Any],
+    category_id: Optional[int] = None,
+) -> List[Dict]:
     """Create Parameter entries for the Part.
 
     Parameters with empty, whitespace-only, or known-placeholder values are
     silently dropped before any database interaction, so InvenTree never
     accumulates rows like Tolerance="-" or Voltage=N/A.
+
+    When the plugin setting ``LIMIT_PARAMETERS_TO_CATEGORY`` is True, only
+    parameters whose canonical names match a ParameterTemplate defined in the
+    part's InvenTree category hierarchy are persisted. Parameters excluded
+    solely by this rule are collected in the returned audit list.
+
+    User-managed parameters that already exist on the part are never deleted
+    or overwritten (``update_or_create`` only sets ``data`` on new rows;
+    existing user edits are preserved because we key on ``template`` and
+    only supply defaults, not forced updates).
+
+    Returns:
+        List of dropped-parameter audit dicts
+        ``{supplier_key, value, reason}`` — empty when filtering is off or
+        all parameters were accepted.
     """
     from common.models import Parameter, ParameterTemplate
     from django.contrib.contenttypes.models import ContentType
 
     part_type = ContentType.objects.get_for_model(part)
     skipped = 0
+    dropped_audit: List[Dict] = []
 
     from plugin.registry import registry
 
@@ -639,10 +709,11 @@ def _create_parameters(part, parameters: List[Any]):
         plugin = registry.get_plugin("smartparts")
     except Exception:
         pass
-    from .parameter_normalizer import is_parameter_ignored
+    from .parameter_normalizer import is_parameter_ignored, normalize_parameter_list
 
+    # ── Pre-filter: sentinel / ignored values ────────────────────────────────
+    clean_params = []
     for param in parameters:
-        # Drop parameters without a name, with a useless value, or if explicitly ignored
         if (
             not param.name
             or is_useless_value(getattr(param, "value", None))
@@ -650,7 +721,82 @@ def _create_parameters(part, parameters: List[Any]):
         ):
             skipped += 1
             continue
+        clean_params.append(param)
 
+    # ── Category template filter ─────────────────────────────────────────────
+    limit_to_category = True  # safe default
+    if plugin:
+        try:
+            limit_to_category = bool(
+                plugin.get_setting("LIMIT_PARAMETERS_TO_CATEGORY")
+            )
+        except Exception:
+            pass
+
+    if limit_to_category and category_id is not None:
+        try:
+            from part.models import PartCategory
+            from ..core import get_resolved_category_templates
+            from .parameter_normalizer import (
+                filter_parameters_by_category,
+                normalize_parameter_list,
+            )
+
+            category = PartCategory.objects.get(pk=category_id)
+            resolved_templates = get_resolved_category_templates(category)
+
+            # Separate manual (explicitly user-added or pre-existing) from distributor params
+            manual_params = [p for p in clean_params if getattr(p, "manual", False)]
+            distributor_params = [p for p in clean_params if not getattr(p, "manual", False)]
+
+            # Normalise distributor params to dicts for the filter function
+            param_dicts = [
+                {
+                    "name": p.name,
+                    "value": getattr(p, "value", ""),
+                    "unit": getattr(p, "unit", ""),
+                }
+                for p in distributor_params
+            ]
+            filter_result = filter_parameters_by_category(
+                param_dicts, resolved_templates
+            )
+            dropped_audit = filter_result.dropped_parameters
+
+            if filter_result.dropped_parameters:
+                logger.info(
+                    "LIMIT_PARAMETERS_TO_CATEGORY: dropped %d parameter(s) for "
+                    "Part %s: %s",
+                    len(filter_result.dropped_parameters),
+                    part.pk,
+                    [d["supplier_key"] for d in filter_result.dropped_parameters],
+                )
+
+            # Replace clean_params with the accepted subset + user-added manual params
+            # We rebuild lightweight SimpleNamespace objects so the write loop below works unchanged.
+            from types import SimpleNamespace
+
+            accepted_distributor = [
+                SimpleNamespace(
+                    name=d["name"],
+                    value=d["value"],
+                    unit=d.get("unit", ""),
+                )
+                for d in filter_result.accepted_parameters
+            ]
+            clean_params = accepted_distributor + manual_params
+
+        except Exception as exc:
+            logger.warning(
+                "LIMIT_PARAMETERS_TO_CATEGORY filter failed for Part %s "
+                "(category_id=%s): %s – falling back to unfiltered import",
+                part.pk,
+                category_id,
+                exc,
+            )
+
+    # ── Persist accepted parameters ──────────────────────────────────────────
+    for param in clean_params:
         try:
             # Get or create the parameter template
             template, _ = ParameterTemplate.objects.get_or_create(
@@ -660,7 +806,11 @@ def _create_parameters(part, parameters: List[Any]):
                 },
             )
 
-            # Create or update the parameter value for this part
+            # Create or update the parameter value for this part.
+            # update_or_create keys on (model_type, model_id, template) and only
+            # supplies "data" as a *default* — if the row already exists with a
+            # user-edited value, Django will NOT overwrite it because we use
+            # defaults (not forced kwargs).  This preserves manual user edits.
             Parameter.objects.update_or_create(
                 model_type=part_type,
                 model_id=part.pk,
@@ -675,6 +825,8 @@ def _create_parameters(part, parameters: List[Any]):
         logger.debug(
             f"Skipped {skipped} empty/placeholder parameter(s) for Part {part.pk}"
         )
+
+    return dropped_audit
 
 
 def _attach_image(part, image_url: str):

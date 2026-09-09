@@ -386,6 +386,10 @@ PARAMETER_MAP = {
     "resistor value": "Resistance",
     "nominal resistance": "Resistance",
     "resistance range": "Resistance",
+    "tolerance": "Tolerance",
+    "tolerance (%)": "Tolerance",
+    "tol": "Tolerance",
+    "tol (%)": "Tolerance",
     "resistance tolerance": "Resistance Tolerance",
     "resistance tolerance (%)": "Resistance Tolerance",
     "resistor tolerance": "Resistance Tolerance",
@@ -481,6 +485,24 @@ PARAMETER_MAP = {
     "voltage rating ac": "Voltage Rating",
     "output voltage nom": "Voltage Rating",
     "output voltage": "Voltage Rating",
+    # ── Power Rating / Rated Power ─────────────────────────────────────
+    "power watts": "Rated Power",
+    "power (watts)": "Rated Power",
+    "power - watts": "Rated Power",
+    "power rating": "Rated Power",
+    "power rating (watts)": "Rated Power",
+    "power rating - watts": "Rated Power",
+    "rated power": "Rated Power",
+    "rated power (watts)": "Rated Power",
+    "power": "Rated Power",
+    "power dissipation": "Rated Power",
+    "power dissipation (max)": "Rated Power",
+    "max power dissipation": "Rated Power",
+    "power - max": "Rated Power",
+    "power max": "Rated Power",
+    "power - rated": "Rated Power",
+    "rated wattage": "Rated Power",
+    "wattage": "Rated Power",
     # ── Mounting Type ──────────────────────────────────────────────────
     "mounting type": "Mounting Type",
     "mounting style": "Mounting Type",
@@ -488,13 +510,75 @@ PARAMETER_MAP = {
     "mount style": "Mounting Type",
     "mounting": "Mounting Type",
     "mount": "Mounting Type",
-    # ── Basic Semiconductor Ratings ────────────────────────────────────
+    # ── Basic Semiconductor Ratings (Diodes & Rectifiers) ──────────────
     "forward voltage": "Forward Voltage",
     "forward voltage (vf)": "Forward Voltage",
     "vf": "Forward Voltage",
     "forward voltage max": "Forward Voltage",
     "vf max": "Forward Voltage",
     "forward voltage (vf) (max)": "Forward Voltage",
+    "voltage forward vf max @ if": "Forward Voltage",
+    "voltage forward vf max if": "Forward Voltage",
+    "voltage - forward (vf) (max) @ if": "Forward Voltage",
+    "voltage - forward (vf) @ if": "Forward Voltage",
+    "voltage forward vf @ if": "Forward Voltage",
+    "voltage - forward (vf)": "Forward Voltage",
+    "voltage - forward": "Forward Voltage",
+    "voltage forward": "Forward Voltage",
+    "voltage forward vf typ": "Forward Voltage",
+    "durchlassspannung": "Forward Voltage",
+    "flussspannung": "Forward Voltage",
+    "test current": "Test Current",
+    "current test": "Test Current",
+    "test current (if)": "Test Current",
+    "current test (if)": "Test Current",
+    "luminous flux": "Luminous Flux",
+    "lumens watt @ current test": "Luminous Flux",
+    "luminous flux @ current temperature": "Luminous Flux",
+    "flux": "Luminous Flux",
+    "forward current": "Forward Current",
+    "forward current (if)": "Forward Current",
+    "forward current max": "Forward Current",
+    "forward current (if) (max)": "Forward Current",
+    "current - forward": "Forward Current",
+    "current - forward (if)": "Forward Current",
+    "current - forward (if) (max)": "Forward Current",
+    "current forward": "Forward Current",
+    "current - average rectified (io)": "Forward Current",
+    "current average rectified io": "Forward Current",
+    "average rectified current": "Forward Current",
+    "average forward current": "Forward Current",
+    "continuous forward current": "Forward Current",
+    "if": "Forward Current",
+    "io": "Forward Current",
+    "durchlassstrom": "Forward Current",
+    "breakdown voltage": "Breakdown Voltage",
+    "breakdown voltage (vbr)": "Breakdown Voltage",
+    "breakdown voltage (min)": "Breakdown Voltage",
+    "voltage - breakdown": "Breakdown Voltage",
+    "voltage - breakdown (min)": "Breakdown Voltage",
+    "voltage breakdown min": "Breakdown Voltage",
+    "voltage breakdown": "Breakdown Voltage",
+    "voltage breakdown (vbr)": "Breakdown Voltage",
+    "vbr": "Breakdown Voltage",
+    "v(br)": "Breakdown Voltage",
+    "zener voltage": "Breakdown Voltage",
+    "voltage zener": "Breakdown Voltage",
+    "voltage - zener": "Breakdown Voltage",
+    "voltage - zener (nom)": "Breakdown Voltage",
+    "voltage - zener (nom) (vz)": "Breakdown Voltage",
+    "voltage zener nom vz": "Breakdown Voltage",
+    "voltage zener nom": "Breakdown Voltage",
+    "zener voltage (vz)": "Breakdown Voltage",
+    "nominal zener voltage": "Breakdown Voltage",
+    "zener voltage range": "Breakdown Voltage",
+    "vz": "Breakdown Voltage",
+    "durchbruchspannung": "Breakdown Voltage",
+    "zener-spannung": "Breakdown Voltage",
+    "zenerspannung": "Breakdown Voltage",
+    "polarity": "Polarity",
+    "diode polarity": "Polarity",
+    "diode configuration": "Polarity",
     "reverse voltage": "Reverse Voltage",
     "dc reverse voltage": "Reverse Voltage",
     "vr": "Reverse Voltage",
@@ -502,21 +586,25 @@ PARAMETER_MAP = {
     "vr max": "Reverse Voltage",
     "dc blocking voltage": "Reverse Voltage",
     "reverse voltage (vr) (max)": "Reverse Voltage",
+    "voltage dc reverse vr max": "Reverse Voltage",
+    "voltage dc reverse vr": "Reverse Voltage",
     "reverse current": "Reverse Current",
     "reverse leakage current": "Reverse Current",
+    "current reverse leakage @ vr": "Reverse Current",
+    "current - reverse leakage @ vr": "Reverse Current",
+    "current - reverse leakage": "Reverse Current",
+    "current reverse leakage": "Reverse Current",
     "ir": "Reverse Current",
     "max reverse current": "Reverse Current",
     "reverse current max": "Reverse Current",
     "leakage current (reverse)": "Reverse Current",
-    "zener voltage": "Zener Voltage",
-    "vz": "Zener Voltage",
-    "zener voltage (vz)": "Zener Voltage",
-    "nominal zener voltage": "Zener Voltage",
-    "zener voltage range": "Zener Voltage",
     "reverse recovery time": "Reverse Recovery Time",
     "trr": "Reverse Recovery Time",
     "reverse recovery time (trr)": "Reverse Recovery Time",
     "recovery time (trr)": "Reverse Recovery Time",
+    "reverse recovery speed": "Reverse Recovery Time",
+    "recovery speed": "Reverse Recovery Time",
+    "speed (recovery)": "Reverse Recovery Time",
     # ── Transistors (BJT & MOSFET) ─────────────────────────────────────
     "dc current gain": "Current Gain (hFE)",
     "hfe": "Current Gain (hFE)",
@@ -576,12 +664,46 @@ PARAMETER_MAP = {
     "voltage - supply": "Supply Voltage",
     "operating supply voltage": "Supply Voltage",
     "supply voltage range": "Supply Voltage",
-    "supply voltage - min": "Supply Voltage",
-    "supply voltage - max": "Supply Voltage",
     "voltage supply": "Supply Voltage",
     "power supply voltage": "Supply Voltage",
     "vcc": "Supply Voltage",
     "vdd": "Supply Voltage",
+    # ── Min Input / Supply Voltage ─────────────────────────────────────
+    "voltage supply span min": "Min Input Voltage",
+    "voltage - supply span (min)": "Min Input Voltage",
+    "voltage supply span (min)": "Min Input Voltage",
+    "supply span min": "Min Input Voltage",
+    "supply voltage span min": "Min Input Voltage",
+    "supply voltage - min": "Min Input Voltage",
+    "supply voltage min": "Min Input Voltage",
+    "supply voltage (min)": "Min Input Voltage",
+    "min supply voltage": "Min Input Voltage",
+    "min input voltage": "Min Input Voltage",
+    "input voltage min": "Min Input Voltage",
+    "input voltage - min": "Min Input Voltage",
+    "input voltage (min)": "Min Input Voltage",
+    "voltage input min": "Min Input Voltage",
+    "voltage - input (min)": "Min Input Voltage",
+    "operating supply voltage min": "Min Input Voltage",
+    "operating voltage min": "Min Input Voltage",
+    # ── Max Input / Supply Voltage ─────────────────────────────────────
+    "voltage supply span max": "Max Input Voltage",
+    "voltage - supply span (max)": "Max Input Voltage",
+    "voltage supply span (max)": "Max Input Voltage",
+    "supply span max": "Max Input Voltage",
+    "supply voltage span max": "Max Input Voltage",
+    "supply voltage - max": "Max Input Voltage",
+    "supply voltage max": "Max Input Voltage",
+    "supply voltage (max)": "Max Input Voltage",
+    "max supply voltage": "Max Input Voltage",
+    "max input voltage": "Max Input Voltage",
+    "input voltage max": "Max Input Voltage",
+    "input voltage - max": "Max Input Voltage",
+    "input voltage (max)": "Max Input Voltage",
+    "voltage input max": "Max Input Voltage",
+    "voltage - input (max)": "Max Input Voltage",
+    "operating supply voltage max": "Max Input Voltage",
+    "operating voltage max": "Max Input Voltage",
     "supply current": "Supply Current",
     "current - supply": "Supply Current",
     "operating supply current": "Supply Current",
@@ -648,15 +770,58 @@ PARAMETER_MAP = {
     "reference voltage": "Reference Voltage",
     "voltage reference": "Reference Voltage",
     "internal reference voltage": "Reference Voltage",
+    # ── Bandwidth ──────────────────────────────────────────────────────
+    "bandwidth": "Bandwidth",
+    "3db bandwidth": "Bandwidth",
+    "-3db bandwidth": "Bandwidth",
+    "3 db bandwidth": "Bandwidth",
+    "-3 db bandwidth": "Bandwidth",
+    "bandwidth (-3db)": "Bandwidth",
+    "bandwidth -3db": "Bandwidth",
+    "3db bandbreite": "Bandwidth",
+    "-3db bandbreite": "Bandwidth",
+    "bandbreite": "Bandwidth",
+    "gain bandwidth product": "Bandwidth",
+    "gain bandwidth product (gbwp)": "Bandwidth",
+    "gain bandwidth product - gbwp": "Bandwidth",
+    "gain bandwidth": "Bandwidth",
+    "gbw": "Bandwidth",
+    "gbwp": "Bandwidth",
+    "cutoff frequency": "Bandwidth",
+    # ── Input Bias Current ─────────────────────────────────────────────
     "input bias current": "Input Bias Current",
     "input bias current (ib)": "Input Bias Current",
     "max input bias current": "Input Bias Current",
+    "current input bias": "Input Bias Current",
+    "current - input bias": "Input Bias Current",
+    "current - input bias (max)": "Input Bias Current",
+    "ib": "Input Bias Current",
+    # ── Input Offset Voltage ───────────────────────────────────────────
     "input offset voltage": "Input Offset Voltage",
     "input offset voltage (vios)": "Input Offset Voltage",
+    "input offset voltage (vos)": "Input Offset Voltage",
     "max input offset voltage": "Input Offset Voltage",
+    "voltage input offset": "Input Offset Voltage",
+    "voltage - input offset": "Input Offset Voltage",
+    "voltage - input offset (vos)": "Input Offset Voltage",
+    "voltage - input offset (vios)": "Input Offset Voltage",
+    "voltage - input offset (max)": "Input Offset Voltage",
+    "vos - input offset voltage": "Input Offset Voltage",
+    "vios - input offset voltage": "Input Offset Voltage",
+    "offset voltage": "Input Offset Voltage",
+    "vos": "Input Offset Voltage",
+    "vios": "Input Offset Voltage",
+    # ── Number of Channels / Circuits ──────────────────────────────────
     "number of channels": "Number of Channels",
     "channels": "Number of Channels",
     "channel count": "Number of Channels",
+    "number of circuits": "Number of Channels",
+    "circuits": "Number of Channels",
+    "circuit count": "Number of Channels",
+    "num channels": "Number of Channels",
+    "num circuits": "Number of Channels",
+    "no. of channels": "Number of Channels",
+    "no. of circuits": "Number of Channels",
     "number of outputs": "Number of Outputs",
     "outputs": "Number of Outputs",
     "output count": "Number of Outputs",
@@ -723,9 +888,11 @@ PARAMETER_MAP = {
     "airflow (cfm)": "Fan Airflow",
     "max airflow": "Fan Airflow",
     "fan speed": "Fan Speed",
-    "speed": "Fan Speed",
+    "fan rated speed": "Fan Speed",
+    "rated fan speed": "Fan Speed",
     "speed (rpm)": "Fan Speed",
-    "rated speed": "Fan Speed",
+    "rated speed (rpm)": "Fan Speed",
+    "fan rotational speed": "Fan Speed",
     "fan static pressure": "Fan Static Pressure",
     "static pressure": "Fan Static Pressure",
     "static pressure (in h2o)": "Fan Static Pressure",
@@ -745,22 +912,32 @@ PARAMETER_MAP = {
     "temp range": "Operating Temperature",
     "temperature range": "Operating Temperature",
     "min operating temperature": "Operating Temperature",
-    "max operating temperature": "Operating Temperature",
-    "operating temperature max": "Operating Temperature",
-    "operating temperature min": "Operating Temperature",
+    "max operating temperature": "Operating Temperature Max",
+    "operating temperature max": "Operating Temperature Max",
+    "operating temp max": "Operating Temperature Max",
+    "operating temperature - max": "Operating Temperature Max",
+    "operating temperature min": "Operating Temperature Min",
+    "operating temp min": "Operating Temperature Min",
+    "operating temperature - min": "Operating Temperature Min",
+    "min operating temperature": "Operating Temperature Min",
     "storage temperature": "Storage Temperature",
     "storage temp": "Storage Temperature",
     "storage temperature range": "Storage Temperature",
     "storage temperature max": "Storage Temperature",
     "storage temperature min": "Storage Temperature",
-    "package / case": "Package / Case",
-    "package/case": "Package / Case",
-    "package": "Package / Case",
-    "case/package": "Package / Case",
-    "case": "Package / Case",
-    "casing": "Package / Case",
-    "packaging": "Package / Case",
-    "device package": "Package / Case",
+    "package / case": "Package Type",
+    "package/case": "Package Type",
+    "package": "Package Type",
+    "case/package": "Package Type",
+    "case": "Package Type",
+    "casing": "Package Type",
+    "packaging": "Package Type",
+    "device package": "Package Type",
+    "supplier device package": "Package Type",
+    "supplier device packaging": "Package Type",
+    "package type": "Package Type",
+    "package-type": "Package Type",
+    "package_type": "Package Type",
     "termination style": "Termination Style",
     "termination": "Termination Style",
     "termination type": "Termination Style",
@@ -903,3 +1080,221 @@ def normalize_parameter_name(name: str, plugin=None) -> str:
             logger.warning(f"Error saving tracked unknown parameter: {e}")
 
     return stripped
+
+
+# ═══════════════════════════════════════════════════════════════════
+#  Category Template Filter & Drop Auditing
+# ═══════════════════════════════════════════════════════════════════
+
+
+@dataclass
+class CategoryFilterResult:
+    """
+    Result of filtering a parameter list against a category's template whitelist.
+
+    Attributes:
+        accepted_parameters: Normalized parameter dicts that matched a template
+            in the category hierarchy and should be persisted.
+        dropped_parameters: Audit list of parameters excluded because they have
+            no matching template. Each entry is a dict with keys
+            ``supplier_key``, ``value``, and ``reason``.
+    """
+
+    accepted_parameters: list
+    dropped_parameters: list
+
+
+def filter_parameters_by_category(
+    normalized_params: list,
+    resolved_templates: dict,
+) -> CategoryFilterResult:
+    """
+    Filter a list of normalized parameter dicts against the category template
+    whitelist, building an audit trail of every dropped entry.
+
+    This function must be called **after** ``normalize_parameter_list()`` so
+    that each dict already has the canonical InvenTree parameter name in its
+    ``"name"`` key.
+
+    The function deliberately does **not** touch the unmapped-key tracking
+    workflow (``TRACKED_UNKNOWN_PARAMETERS``).  Parameters that never made it
+    through the ``normalize_parameter_name`` step because they were unknown are
+    not affected here.
+
+    Args:
+        normalized_params:
+            List of dicts produced by ``normalize_parameter_list()``.
+            Each dict has at minimum: ``"name"``, ``"value"``, ``"unit"``.
+        resolved_templates:
+            Mapping of ``template_name → PartCategoryParameterTemplate``
+            returned by ``get_resolved_category_templates(category)``.
+            Pass an **empty dict** to indicate "no templates defined anywhere
+            in the hierarchy" — every parameter will then be dropped when
+            ``LIMIT_PARAMETERS_TO_CATEGORY`` is True.
+
+    Returns:
+        :class:`CategoryFilterResult` with two lists:
+        ``accepted_parameters`` and ``dropped_parameters``.
+    """
+    accepted: list = []
+    dropped: list = []
+
+    if not resolved_templates:
+        # No category templates defined: drop all parameters with audit trail
+        for param in normalized_params:
+            name: str = param.get("name", "")
+            value: str = param.get("value", "")
+            dropped.append(
+                {
+                    "supplier_key": name,
+                    "value": value,
+                    "reason": "not_in_category_templates",
+                }
+            )
+            logger.debug(
+                "CategoryFilter: dropped '%s'='%s' — not in category templates",
+                name,
+                value,
+            )
+        return CategoryFilterResult(
+            accepted_parameters=accepted,
+            dropped_parameters=dropped,
+        )
+
+    # Optional learned mappings lookup without touching unknown tracking
+    learned_mappings = {}
+    try:
+        from plugin.registry import registry
+        plug = registry.get_plugin("smartparts")
+        if plug:
+            import json
+            raw_json = plug.get_setting("LEARNED_PARAMETER_MAPPINGS") or "{}"
+            data = json.loads(raw_json)
+            if isinstance(data, dict):
+                for k, v in data.items():
+                    if k and v is not None:
+                        val = v.get("canonical_name", "") if isinstance(v, dict) else str(v)
+                        if val:
+                            learned_mappings[sanitize_parameter_name(k)] = val.strip()
+    except Exception:
+        pass
+
+    def _resolve_canonical_name(raw: str) -> str:
+        s = sanitize_parameter_name(raw)
+        if s in learned_mappings:
+            return learned_mappings[s]
+        if s in PARAMETER_MAP:
+            return PARAMETER_MAP[s]
+        return raw
+
+    # Build fast template lookup mappings:
+    # 1. Direct lowercase: "resistance" -> "Resistance"
+    template_by_lower = {name.lower(): name for name in resolved_templates}
+    # 2. Sanitized lowercase: "package case" -> "Package / Case"
+    template_by_sanitized = {sanitize_parameter_name(name): name for name in resolved_templates}
+    # 3. Canonical mapping of category templates:
+    # E.g. if category template is "Power", and "Power" maps to "Rated Power",
+    # then "rated power" -> "Power"
+    template_by_canon = {}
+    for name in resolved_templates:
+        c = _resolve_canonical_name(name)
+        if c:
+            template_by_canon[c.lower()] = name
+            template_by_canon[sanitize_parameter_name(c)] = name
+
+    accepted_by_template = {}
+    dropped: list = []
+
+    for param in normalized_params:
+        name: str = param.get("name", "")
+        value: str = param.get("value", "")
+        raw_name = str(name).strip()
+
+        if not raw_name:
+            continue
+
+        matched_template_name = None
+        match_priority = 99
+
+        # Priority 1: Direct case-insensitive match against category templates
+        raw_lower = raw_name.lower()
+        if raw_lower in template_by_lower:
+            matched_template_name = template_by_lower[raw_lower]
+            match_priority = 1
+
+        # Priority 2: Sanitized match (handles spacing / punctuation differences)
+        if not matched_template_name:
+            sanitized_name = sanitize_parameter_name(raw_name)
+            if sanitized_name in template_by_sanitized:
+                matched_template_name = template_by_sanitized[sanitized_name]
+                match_priority = 2
+
+        # Priority 3: Alias resolution via PARAMETER_MAP / learned mappings
+        # (e.g. "power watts" -> "Rated Power")
+        if not matched_template_name:
+            canonical_name = _resolve_canonical_name(raw_name)
+            canon_lower = canonical_name.lower()
+            if canon_lower in template_by_lower:
+                matched_template_name = template_by_lower[canon_lower]
+                match_priority = 3
+            elif sanitize_parameter_name(canonical_name) in template_by_sanitized:
+                matched_template_name = template_by_sanitized[sanitize_parameter_name(canonical_name)]
+                match_priority = 3
+            elif canon_lower in template_by_canon:
+                matched_template_name = template_by_canon[canon_lower]
+                match_priority = 3
+            elif sanitize_parameter_name(canonical_name) in template_by_canon:
+                matched_template_name = template_by_canon[sanitize_parameter_name(canonical_name)]
+                match_priority = 3
+
+        if matched_template_name:
+            param_copy = dict(param)
+            param_copy["name"] = matched_template_name
+
+            if matched_template_name in accepted_by_template:
+                prev_priority, prev_param, prev_raw, prev_val = accepted_by_template[matched_template_name]
+                if match_priority < prev_priority:
+                    accepted_by_template[matched_template_name] = (match_priority, param_copy, raw_name, value)
+                    dropped.append(
+                        {
+                            "supplier_key": prev_raw,
+                            "value": prev_val,
+                            "reason": "not_in_category_templates",
+                        }
+                    )
+                else:
+                    dropped.append(
+                        {
+                            "supplier_key": raw_name,
+                            "value": value,
+                            "reason": "not_in_category_templates",
+                        }
+                    )
+            else:
+                accepted_by_template[matched_template_name] = (match_priority, param_copy, raw_name, value)
+        else:
+            dropped.append(
+                {
+                    "supplier_key": raw_name,
+                    "value": value,
+                    "reason": "not_in_category_templates",
+                }
+            )
+            logger.debug(
+                "CategoryFilter: dropped '%s'='%s' — not in category templates",
+                raw_name,
+                value,
+            )
+
+    accepted = [item[1] for item in accepted_by_template.values()]
+
+    logger.debug(
+        "CategoryFilter: %d accepted, %d dropped (total %d)",
+        len(accepted),
+        len(dropped),
+        len(normalized_params),
+    )
+    return CategoryFilterResult(
+        accepted_parameters=accepted,
+        dropped_parameters=dropped,
+    )

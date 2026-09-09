@@ -90,7 +90,8 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "power management": "power",
     "pmic": "power management ic",
     # MOSFETs / Transistors
-    "mosfet": "transistor",
+    "mosfet": "mosfet",
+    "mosfets": "mosfet",
     "bjt": "transistor",
     "jfet": "transistor",
     "igbt": "transistor",
@@ -161,6 +162,718 @@ _BUILTIN_SYNONYMS: Dict[str, str] = {
     "lcd": "display",
     "oled": "display",
     "display": "display",
+    # German Category Taxonomy Synonyms
+    "operationsverstärker": "amplifiers opamps",
+    "operationsverstaerker": "amplifiers opamps",
+    "präzisionsverstärker": "amplifiers opamps",
+    "praezisionsverstaerker": "amplifiers opamps",
+    "trennverstärker": "amplifiers opamps",
+    "trennverstaerker": "amplifiers opamps",
+    "analoge komparatoren": "amplifiers opamps",
+    "leistungsinduktivitäten": "power inductors",
+    "leistungsinduktivitaeten": "power inductors",
+    "spule": "power inductors",
+    "spulen": "power inductors",
+    "gleichtaktdrosseln": "ferrite beads",
+    "audio transformatoren": "inductors transformers",
+    "signal transformatoren": "inductors transformers",
+    "kondensator aus mehreren keramikschichten": "ceramic capacitors",
+    "keramikschichten": "ceramic capacitors",
+    "kondensator": "capacitors",
+    "kondensatoren": "capacitors",
+    "keramikkondensator": "ceramic capacitors",
+    "keramikkondensatoren": "ceramic capacitors",
+    "aluminium elektrolyt kondensatoren": "aluminium electrolytic capacitors",
+    "aluminium elektrolyt": "aluminium electrolytic",
+    "elektrolyt kondensatoren": "electrolytic capacitors",
+    "superkondensatoren": "electrolytic capacitors",
+    "ultra kondensatoren": "electrolytic capacitors",
+    "dc/dc wandler": "dc dc converters",
+    "dc dc wandler": "dc dc converters",
+    "schaltspannungsregler": "dc dc converters",
+    "schaltregler": "dc dc converters",
+    "ac/dc wandler": "dc dc converters",
+    "ac dc wandler": "dc dc converters",
+    "lineare spannungsregler": "ldo regulators",
+    "ldo spannungs regulator": "ldo regulators",
+    "hot swap spannungscontroller": "power management",
+    "überwachungsschaltungen": "power management",
+    "ueberwachungsschaltungen": "power management",
+    "batterie management": "power management",
+    "led stromversorgung": "power management",
+    "energieverwaltung": "power management",
+    "mosfets": "mosfet transistors",
+    "mosfet module": "mosfet transistors",
+    "sicherungen zur aufbaumontage": "fuses circuit protection",
+    "sicherungen": "fuses",
+    "multiplex schalter ic": "logic integrated circuits",
+    "galvanisch isolierte gate treiber": "logic integrated circuits",
+    "gate treiber": "logic integrated circuits",
+    "digitale isolatoren": "logic integrated circuits",
+    "isolatoren": "logic integrated circuits",
+    "flip flops": "logic integrated circuits",
+    "taktgeneratoren": "logic integrated circuits",
+    "zeitgeber": "logic integrated circuits",
+    "8 bit mikrocontroller": "microcontroller integrated circuits",
+    "mikrocontroller": "microcontroller",
+    "wippschalter": "switches electromechanical",
+    "mech schalter": "switches electromechanical",
+    "reed relais": "relays electromechanical",
+    "relais": "relays",
+    "usb stecker": "headers wire housings",
+    "stecker": "connectors",
+    "melf widerstände": "surface mount smd resistors",
+    "melf widerstaende": "surface mount smd resistors",
+    "dünnfilmwiderstände": "surface mount smd resistors",
+    "duennfilmwiderstaende": "surface mount smd resistors",
+    "stromsensoren": "sensors transducers",
+
+        # ════════════════════════════════════════════════════════════════
+    # Widerstand & Widerstände
+    # ════════════════════════════════════════════════════════════════
+    "widerstand": "Resistance",
+    "widerstandswert": "Resistance",
+    "widerstandsmesswert": "Resistance",
+    "widerstand (ohm)": "Resistance",
+    "widerstand ohm": "Resistance",
+    "nennwiderstand": "Resistance",
+    "nennwert widerstand": "Resistance",
+    "sollwiderstand": "Resistance",
+    "widerstandsbereich": "Resistance",
+    "widerstandswertebereich": "Resistance",
+    "r-wert": "Resistance",
+ 
+    "widerstandstoleranz": "Resistance Tolerance",
+    "toleranz widerstand": "Resistance Tolerance",
+    "toleranz (widerstand)": "Resistance Tolerance",
+    "widerstands-toleranz": "Resistance Tolerance",
+    "genauigkeit widerstand": "Resistance Tolerance",
+ 
+    "temperaturkoeffizient": "Temperature Coefficient (TCR)",
+    "temperaturkoeffizient des widerstands": "Temperature Coefficient (TCR)",
+    "temperaturkoeffizient (ppm/k)": "Temperature Coefficient (TCR)",
+    "temperaturkoeffizient (ppm/°c)": "Temperature Coefficient (TCR)",
+    "tk": "Temperature Coefficient (TCR)",
+    "tkr": "Temperature Coefficient (TCR)",
+    "tc": "Temperature Coefficient (TCR)",
+ 
+    # NEU: Nennleistung / Belastbarkeit taucht bei praktisch jedem
+    # Widerstand/Bauteil bei RS, Mouser, Digi-Key DE als eigenes Feld auf
+    "nennleistung": "Power Rating",
+    "belastbarkeit": "Power Rating",
+    "leistung": "Power Rating",
+    "verlustleistung": "Power Rating",
+    "max. leistung": "Power Rating",
+    "leistungsaufnahme": "Power Rating",
+    "leistungsangabe": "Power Rating",
+    "watt": "Power Rating",
+ 
+    # ════════════════════════════════════════════════════════════════
+    # Kapazität & Kondensatoren
+    # ════════════════════════════════════════════════════════════════
+    "kapazität": "Capacitance",
+    "kapazitaet": "Capacitance",
+    "kapazitätswert": "Capacitance",
+    "nennkapazität": "Capacitance",
+    "nennkapazitaet": "Capacitance",
+    "sollkapazität": "Capacitance",
+    "kondensatorwert": "Capacitance",
+    "kapazitätsbereich": "Capacitance",
+    "c-wert": "Capacitance",
+ 
+    "kapazitätstoleranz": "Capacitance Tolerance",
+    "kapazitaetstoleranz": "Capacitance Tolerance",
+    "toleranz kondensator": "Capacitance Tolerance",
+    "toleranz (kondensator)": "Capacitance Tolerance",
+    "genauigkeit kondensator": "Capacitance Tolerance",
+ 
+    "dielektrikum": "Dielectric Material",
+    "dielektrisches material": "Dielectric Material",
+    "dielektrikumstyp": "Dielectric Material",
+    "dielektrizitätsklasse": "Dielectric Material",
+    "keramikklasse": "Dielectric Material",
+    "kondensatortyp": "Dielectric Material",
+    "kondensator typ": "Dielectric Material",
+ 
+    "äquivalenter serienwiderstand": "Equivalent Series Resistance (ESR)",
+    "aequivalenter serienwiderstand": "Equivalent Series Resistance (ESR)",
+    "esr": "Equivalent Series Resistance (ESR)",
+    "esr (ohm)": "Equivalent Series Resistance (ESR)",
+    "max. esr": "Equivalent Series Resistance (ESR)",
+    "serienwiderstand": "Equivalent Series Resistance (ESR)",
+ 
+    "rippelstrom": "Ripple Current",
+    "welligkeitsstrom": "Ripple Current",
+    "max. rippelstrom": "Ripple Current",
+    "zulässiger rippelstrom": "Ripple Current",
+    "zulaessiger rippelstrom": "Ripple Current",
+    "brummstrom": "Ripple Current",
+ 
+    "leckstrom": "Leakage Current",
+    "kriechstrom": "Leakage Current",
+    "max. leckstrom": "Leakage Current",
+    "dc-leckstrom": "Leakage Current",
+    "ableitstrom": "Leakage Current",
+ 
+    # ════════════════════════════════════════════════════════════════
+    # Induktivität & Magnetika
+    # ════════════════════════════════════════════════════════════════
+    "induktivität": "Inductance",
+    "induktivitaet": "Inductance",
+    "induktivitätswert": "Inductance",
+    "nenninduktivität": "Inductance",
+    "nenninduktivitaet": "Inductance",
+    "l-wert": "Inductance",
+ 
+    "induktivitätstoleranz": "Inductance Tolerance",
+    "induktivitaetstoleranz": "Inductance Tolerance",
+    "toleranz spule": "Inductance Tolerance",
+    "toleranz induktivität": "Inductance Tolerance",
+ 
+    "gütefaktor": "Q Factor",
+    "guetefaktor": "Q Factor",
+    "q-faktor": "Q Factor",
+    "güte": "Q Factor",
+    "guete": "Q Factor",
+    "min. güte": "Q Factor",
+    "min. guete": "Q Factor",
+ 
+    "eigenresonanzfrequenz": "Self Resonant Frequency (SRF)",
+    "resonanzfrequenz": "Self Resonant Frequency (SRF)",
+    "eigenresonanz": "Self Resonant Frequency (SRF)",
+    "srf": "Self Resonant Frequency (SRF)",
+    "min. srf": "Self Resonant Frequency (SRF)",
+ 
+    "gleichstromwiderstand": "DC Resistance (DCR)",
+    "dc-widerstand": "DC Resistance (DCR)",
+    "dcr": "DC Resistance (DCR)",
+    "max. dcr": "DC Resistance (DCR)",
+    "spulenwiderstand (dc)": "DC Resistance (DCR)",
+ 
+    "kernmaterial": "Core Material",
+    "spulenkern": "Core Material",
+    "kerntyp": "Core Material",
+ 
+    "sättigungsstrom": "Saturation Current (Isat)",
+    "saettigungsstrom": "Saturation Current (Isat)",
+    "isat": "Saturation Current (Isat)",
+    "max. sättigungsstrom": "Saturation Current (Isat)",
+ 
+    "temperaturanstiegsstrom": "Temperature Rise Current (Itemp)",
+    "effektivstrom": "Temperature Rise Current (Itemp)",
+    "itemp": "Temperature Rise Current (Itemp)",
+    "nennstrom (temperaturanstieg)": "Temperature Rise Current (Itemp)",
+ 
+    # ════════════════════════════════════════════════════════════════
+    # Spannungsangaben
+    # ════════════════════════════════════════════════════════════════
+    "spannung": "Voltage Rating",
+    "nennspannung": "Voltage Rating",
+    "betriebsspannung": "Voltage Rating",
+    "max. spannung": "Voltage Rating",
+    "maximale spannung": "Voltage Rating",
+    "spannungsfestigkeit": "Voltage Rating",
+    "ausgangsspannung": "Voltage Rating",
+    "spannung dc": "Voltage Rating",
+    "spannung ac": "Voltage Rating",
+    "spannung (dc)": "Voltage Rating",
+    "spannung (ac)": "Voltage Rating",
+    "arbeitsspannung": "Voltage Rating",
+    "vdc": "Voltage Rating",
+    "minimale betriebsspannung": "Voltage Rating",
+    "maximale betriebsspannung": "Voltage Rating",
+ 
+    # ════════════════════════════════════════════════════════════════
+    # Montageart / Bauform (Bestückung)
+    # ════════════════════════════════════════════════════════════════
+    "montageart": "Mounting Type",
+    "bauform montage": "Mounting Type",
+    "befestigungsart": "Mounting Type",
+    "montage": "Mounting Type",
+    "montagetyp": "Mounting Type",
+    "bestückungsart": "Mounting Type",
+    "bestueckungsart": "Mounting Type",
+    "smd/tht": "Mounting Type",
+    "smd / tht": "Mounting Type",
+ 
+    # NEU: Anschlussart / Axial-Radial-SMD -> eigene Kategorie,
+    # da bei RS/Farnell meist getrennt von "Termination Style" geführt
+    "anschlussart": "Terminal Style",
+    "axial/radial": "Terminal Style",
+    "axial / radial": "Terminal Style",
+    "anschlusstyp (form)": "Terminal Style",
+    "bauform anschluss": "Terminal Style",
+    "gehäuseform anschluss": "Terminal Style",
+    "leitungsform": "Terminal Style",
+ 
+    # ════════════════════════════════════════════════════════════════
+    # Grundlegende Halbleiterwerte
+    # ════════════════════════════════════════════════════════════════
+    "durchlassspannung": "Forward Voltage",
+    "vorwärtsspannung": "Forward Voltage",
+    "vorwaertsspannung": "Forward Voltage",
+    "max. durchlassspannung": "Forward Voltage",
+    "flussspannung": "Forward Voltage",
+    "vf": "Forward Voltage",
+ 
+    "sperrspannung": "Reverse Voltage",
+    "rückwärtsspannung": "Reverse Voltage",
+    "rueckwaertsspannung": "Reverse Voltage",
+    "max. sperrspannung": "Reverse Voltage",
+    "dc-sperrspannung": "Reverse Voltage",
+    "vr": "Reverse Voltage",
+ 
+    "sperrstrom": "Reverse Current",
+    "rückwärtsstrom": "Reverse Current",
+    "rueckwaertsstrom": "Reverse Current",
+    "max. sperrstrom": "Reverse Current",
+    "sperrschichtleckstrom": "Reverse Current",
+    "ir": "Reverse Current",
+ 
+    "zener-spannung": "Zener Voltage",
+    "zenerspannung": "Zener Voltage",
+    "z-spannung": "Zener Voltage",
+    "nennzenerspannung": "Zener Voltage",
+    "vz": "Zener Voltage",
+ 
+    "sperrverzugszeit": "Reverse Recovery Time",
+    "rückwärtserholzeit": "Reverse Recovery Time",
+    "rueckwaertserholzeit": "Reverse Recovery Time",
+    "erholzeit": "Reverse Recovery Time",
+    "trr": "Reverse Recovery Time",
+ 
+    # ════════════════════════════════════════════════════════════════
+    # Transistoren (BJT & MOSFET)
+    # ════════════════════════════════════════════════════════════════
+    "stromverstärkung": "Current Gain (hFE)",
+    "stromverstaerkung": "Current Gain (hFE)",
+    "gleichstromverstärkung": "Current Gain (hFE)",
+    "gleichstromverstaerkung": "Current Gain (hFE)",
+    "hfe": "Current Gain (hFE)",
+    "hfe min.": "Current Gain (hFE)",
+ 
+    "kollektor-emitter-sättigungsspannung": "Collector-Emitter Saturation Voltage",
+    "kollektor-emitter-saettigungsspannung": "Collector-Emitter Saturation Voltage",
+    "vce sat": "Collector-Emitter Saturation Voltage",
+    "vce(sat)": "Collector-Emitter Saturation Voltage",
+ 
+    "kollektorstrom": "Continuous Collector Current",
+    "dauerkollektorstrom": "Continuous Collector Current",
+    "max. kollektorstrom": "Continuous Collector Current",
+    "ic": "Continuous Collector Current",
+ 
+    "drainstrom": "Continuous Drain Current (Id)",
+    "dauerdrainstrom": "Continuous Drain Current (Id)",
+    "max. drainstrom": "Continuous Drain Current (Id)",
+    "id": "Continuous Drain Current (Id)",
+ 
+    "drain-source-spannung": "Drain to Source Voltage (Vdss)",
+    "drain-source-durchbruchspannung": "Drain to Source Voltage (Vdss)",
+    "vdss": "Drain to Source Voltage (Vdss)",
+ 
+    "gate-source-schwellenspannung": "Gate to Source Threshold Voltage (Vgs th)",
+    "gate-schwellenspannung": "Gate to Source Threshold Voltage (Vgs th)",
+    "vgs(th)": "Gate to Source Threshold Voltage (Vgs th)",
+ 
+    "einschaltwiderstand": "On Resistance (Rds On)",
+    "durchlasswiderstand": "On Resistance (Rds On)",
+    "rds(on)": "On Resistance (Rds On)",
+    "rds on": "On Resistance (Rds On)",
+ 
+    "gate-ladung": "Gate Charge",
+    "gesamtgateladung": "Gate Charge",
+    "qg": "Gate Charge",
+ 
+    "eingangskapazität": "Input Capacitance",
+    "eingangskapazitaet": "Input Capacitance",
+    "ciss": "Input Capacitance",
+ 
+    "ausgangskapazität": "Output Capacitance",
+    "ausgangskapazitaet": "Output Capacitance",
+    "coss": "Output Capacitance",
+ 
+    "sperrverzugsladung": "Reverse Recovery Charge (Qrr)",
+    "qrr": "Reverse Recovery Charge (Qrr)",
+ 
+    # ════════════════════════════════════════════════════════════════
+    # Integrierte Schaltungen (ICs) & Leistung
+    # ════════════════════════════════════════════════════════════════
+    "versorgungsspannung": "Supply Voltage",
+    "betriebsspannungsbereich": "Supply Voltage",
+    "versorgungsspannungsbereich": "Supply Voltage",
+    "vcc": "Supply Voltage",
+    "vdd": "Supply Voltage",
+ 
+    "versorgungsstrom": "Supply Current",
+    "betriebsstrom": "Supply Current",
+    "ruhestrom": "Supply Current",
+    "icc": "Supply Current",
+    "idd": "Supply Current",
+ 
+    "ausgangsstrom": "Output Current",
+    "max. ausgangsstrom": "Output Current",
+    "dauerausgangsstrom": "Output Current",
+    "iout": "Output Current",
+ 
+    "schnittstelle": "Interface",
+    "kommunikationsschnittstelle": "Interface",
+    "anschlussmöglichkeiten": "Interface",
+    "anschlussmoeglichkeiten": "Interface",
+    "bus-schnittstelle": "Interface",
+    "protokoll": "Interface",
+ 
+    "speichergröße": "Memory Size",
+    "speichergroesse": "Memory Size",
+    "speicherkapazität": "Memory Size",
+    "speicherkapazitaet": "Memory Size",
+    "programmspeichergröße": "Memory Size",
+    "programmspeichergroesse": "Memory Size",
+    "ram-größe": "Memory Size",
+    "flash-größe": "Memory Size",
+ 
+    "speichertyp": "Memory Type",
+    "speicherart": "Memory Type",
+    "nichtflüchtiger speichertyp": "Memory Type",
+ 
+    "taktfrequenz": "Clock Frequency",
+    "taktrate": "Clock Frequency",
+    "oszillatorfrequenz": "Clock Frequency",
+    "max. taktfrequenz": "Clock Frequency",
+ 
+    "pinanzahl": "Pin Count",
+    "anzahl pins": "Pin Count",
+    "anzahl anschlüsse": "Pin Count",
+    "anzahl anschluesse": "Pin Count",
+    "anzahl der anschlüsse": "Pin Count",
+    "anschlusszahl": "Pin Count",
+    "polzahl": "Pin Count",
+ 
+    "prozessorkern": "Core Processor",
+    "kernarchitektur": "Core Processor",
+    "cpu-kern": "Core Processor",
+ 
+    "kernbreite": "Core Width",
+    "datenbusbreite": "Core Width",
+    "busbreite": "Core Width",
+    "bit-breite": "Core Width",
+ 
+    "adc-/dac-auflösung": "ADC / DAC Resolution",
+    "adc-/dac-aufloesung": "ADC / DAC Resolution",
+    "wandlerauflösung": "ADC / DAC Resolution",
+    "wandleraufloesung": "ADC / DAC Resolution",
+    "auflösung": "ADC / DAC Resolution",
+    "aufloesung": "ADC / DAC Resolution",
+ 
+    "gleichtaktunterdrückung": "Common Mode Rejection Ratio (CMRR)",
+    "gleichtaktunterdrueckung": "Common Mode Rejection Ratio (CMRR)",
+    "cmrr": "Common Mode Rejection Ratio (CMRR)",
+ 
+    "anstiegsrate": "Slew Rate",
+    "flankensteilheit": "Slew Rate",
+    "slew rate": "Slew Rate",
+ 
+    "logiktyp": "Logic Type",
+    "logikfamilie": "Logic Type",
+    "logikfunktion": "Logic Type",
+ 
+    "ausgangstyp": "Output Type",
+    "ausgangskonfiguration": "Output Type",
+    "logikausgangstyp": "Output Type",
+ 
+    "referenzspannung": "Reference Voltage",
+    "spannungsreferenz": "Reference Voltage",
+    "interne referenzspannung": "Reference Voltage",
+ 
+    "eingangsvorstrom": "Input Bias Current",
+    "eingangsruhestrom": "Input Bias Current",
+ 
+    "eingangsoffsetspannung": "Input Offset Voltage",
+    "offsetspannung": "Input Offset Voltage",
+ 
+    "anzahl kanäle": "Number of Channels",
+    "anzahl kanaele": "Number of Channels",
+    "kanalanzahl": "Number of Channels",
+    "kanäle": "Number of Channels",
+    "kanaele": "Number of Channels",
+ 
+    "anzahl ausgänge": "Number of Outputs",
+    "anzahl ausgaenge": "Number of Outputs",
+    "ausgänge": "Number of Outputs",
+    "ausgaenge": "Number of Outputs",
+ 
+    # ════════════════════════════════════════════════════════════════
+    # Elektromechanik & Mechanik
+    # ════════════════════════════════════════════════════════════════
+    "schaltkonfiguration": "Circuit / Contact Form",
+    "kontaktform": "Circuit / Contact Form",
+    "schaltkontakt": "Circuit / Contact Form",
+    "schaltbild": "Circuit / Contact Form",
+    "polzahl und schaltstellungen": "Circuit / Contact Form",
+ 
+    "kontaktbelastbarkeit": "Contact Rating",
+    "kontaktstrom": "Contact Rating",
+    "schaltleistung": "Contact Rating",
+    "max. kontaktstrom": "Contact Rating",
+ 
+    "kontaktwiderstand": "Contact Resistance",
+    "max. kontaktwiderstand": "Contact Resistance",
+    "übergangswiderstand": "Contact Resistance",
+    "uebergangswiderstand": "Contact Resistance",
+ 
+    "isolationswiderstand": "Insulation Resistance",
+    "min. isolationswiderstand": "Insulation Resistance",
+    "isolierwiderstand": "Insulation Resistance",
+ 
+    "durchschlagfestigkeit": "Dielectric Strength",
+    "spannungsfestigkeit (isolation)": "Dielectric Strength",
+    "prüfspannung": "Dielectric Strength",
+    "pruefspannung": "Dielectric Strength",
+ 
+    "betätigungsart": "Actuator Type",
+    "betaetigungsart": "Actuator Type",
+    "schalterbetätigung": "Actuator Type",
+    "schalterbetaetigung": "Actuator Type",
+    "betätigungselement": "Actuator Type",
+ 
+    "beleuchtung": "Illumination",
+    "hintergrundbeleuchtung": "Illumination",
+    "beleuchtungsart": "Illumination",
+    "beleuchtet": "Illumination",
+ 
+    "spulenspannung": "Coil Voltage",
+    "relaisspulenspannung": "Coil Voltage",
+    "spulennennspannung": "Coil Voltage",
+ 
+    "spulenwiderstand": "Coil Resistance",
+    "relaisspulenwiderstand": "Coil Resistance",
+ 
+    "spulenleistung": "Coil Power",
+    "spulenleistungsaufnahme": "Coil Power",
+ 
+    "kontaktmaterial": "Contact Material",
+    "relaiskontaktmaterial": "Contact Material",
+    "kontaktbeschichtung": "Contact Material",
+ 
+    "reihenanzahl": "Row Count",
+    "anzahl reihen": "Row Count",
+    "reihen": "Row Count",
+ 
+    "raster": "Pitch",
+    "rastermaß": "Pitch",
+    "rastermass": "Pitch",
+    "kontaktabstand": "Pitch",
+    "pinabstand": "Pitch",
+    "polabstand": "Pitch",
+ 
+    "geschlecht": "Gender / Type",
+    "steckertyp": "Gender / Type",
+    "kontakttyp": "Gender / Type",
+    "stecker/buchse": "Gender / Type",
+    "stecker / buchse": "Gender / Type",
+ 
+    "montageausrichtung": "Mounting Orientation",
+    "einbaulage": "Mounting Orientation",
+    "montagewinkel": "Mounting Orientation",
+    "gerade/gewinkelt": "Mounting Orientation",
+ 
+    "luftstrom": "Fan Airflow",
+    "förderleistung": "Fan Airflow",
+    "foerderleistung": "Fan Airflow",
+    "luftdurchsatz": "Fan Airflow",
+ 
+    "lüfterdrehzahl": "Fan Speed",
+    "luefterdrehzahl": "Fan Speed",
+    "drehzahl": "Fan Speed",
+    "nenndrehzahl": "Fan Speed",
+ 
+    "statischer druck": "Fan Static Pressure",
+    "förderdruck": "Fan Static Pressure",
+    "foerderdruck": "Fan Static Pressure",
+ 
+    "lüftergeräusch": "Fan Noise",
+    "lueftergeraeusch": "Fan Noise",
+    "geräuschpegel": "Fan Noise",
+    "geraeuschpegel": "Fan Noise",
+    "schalldruckpegel": "Fan Noise",
+ 
+    "lagertyp": "Fan Bearing Type",
+    "lagerart": "Fan Bearing Type",
+    "lager": "Fan Bearing Type",
+ 
+    "lüfternennspannung": "Fan Rated Voltage",
+    "luefternennspannung": "Fan Rated Voltage",
+    "lüfter betriebsspannung": "Fan Rated Voltage",
+ 
+    # ════════════════════════════════════════════════════════════════
+    # Allgemein & Umgebungsbedingungen
+    # ════════════════════════════════════════════════════════════════
+    "betriebstemperatur": "Operating Temperature",
+    "betriebstemperaturbereich": "Operating Temperature",
+    "arbeitstemperaturbereich": "Operating Temperature",
+    "betriebstemperatur min.": "Operating Temperature",
+    "betriebstemperatur max.": "Operating Temperature",
+    "minimale betriebstemperatur": "Operating Temperature",
+    "maximale betriebstemperatur": "Operating Temperature",
+    "einsatztemperaturbereich": "Operating Temperature",
+ 
+    "lagertemperatur": "Storage Temperature",
+    "lagertemperaturbereich": "Storage Temperature",
+    "lagertemperatur min.": "Storage Temperature",
+    "lagertemperatur max.": "Storage Temperature",
+    "minimale lagertemperatur": "Storage Temperature",
+    "maximale lagertemperatur": "Storage Temperature",
+ 
+    "gehäuse": "Package / Case",
+    "gehaeuse": "Package / Case",
+    "gehäuseform": "Package / Case",
+    "gehaeuseform": "Package / Case",
+    "gehäusegröße": "Package / Case",
+    "gehaeusegroesse": "Package / Case",
+    "bauform": "Package / Case",
+    "verpackung": "Package / Case",
+    "bauteilgehäuse": "Package / Case",
+ 
+    "anschlussart (termination)": "Termination Style",
+    "terminierung": "Termination Style",
+    "anschlussweise": "Termination Style",
+    "anschlusstechnik": "Termination Style",
+ 
+    "feuchteempfindlichkeitsstufe": "Moisture Sensitivity Level (MSL)",
+    "feuchteempfindlichkeitsklasse": "Moisture Sensitivity Level (MSL)",
+    "msl": "Moisture Sensitivity Level (MSL)",
+    "msl-stufe": "Moisture Sensitivity Level (MSL)",
+ 
+    "rohs-status": "RoHS Status",
+    "rohs-konform": "RoHS Status",
+    "rohs konform": "RoHS Status",
+    "rohs": "RoHS Status",
+ 
+    "bleifrei": "Lead-Free Status",
+    "bleifrei-status": "Lead-Free Status",
+    "bleifreier status": "Lead-Free Status",
+ 
+    "halogenfrei": "Halogen-Free Status",
+    "halogenfrei-status": "Halogen-Free Status",
+    "halogenfreier status": "Halogen-Free Status",
+ 
+    "breite": "Physical Width",
+    "baubreite": "Physical Width",
+ 
+    "länge": "Physical Length",
+    "laenge": "Physical Length",
+    "baulänge": "Physical Length",
+    "baulaenge": "Physical Length",
+ 
+    "höhe": "Physical Height",
+    "hoehe": "Physical Height",
+    "bauhöhe": "Physical Height",
+    "bauhoehe": "Physical Height",
+    "max. höhe": "Physical Height",
+    "max. hoehe": "Physical Height",
+ 
+    "gewicht": "Weight",
+    "eigengewicht": "Weight",
+    "stückgewicht": "Weight",
+    "stueckgewicht": "Weight",
+ 
+    "farbe": "Color",
+    "led-farbe": "Color",
+    "gehäusefarbe": "Color",
+ 
+    "material": "Material",
+    "gehäusematerial": "Material",
+    "gehaeusematerial": "Material",
+    "werkstoff": "Material",
+    "körpermaterial": "Material",
+    "koerpermaterial": "Material",
+ 
+    "befestigungslochdurchmesser": "Mounting Hole Diameter",
+    "bohrungsdurchmesser": "Mounting Hole Diameter",
+    "montagebohrung": "Mounting Hole Diameter",
+ 
+    # ════════════════════════════════════════════════════════════════
+    # NEU: Kategorien, die im Original fehlten, bei Distributoren aber
+    # (v.a. bei Facettensuche/Attributlisten von RS, Farnell, Digi-Key)
+    # regelmäßig als eigenes Attribut auftauchen.
+    # ════════════════════════════════════════════════════════════════
+ 
+    "produktart": "Product Type",
+    "produkttyp": "Product Type",
+    "bauteiltyp": "Product Type",
+    "warengruppe": "Product Type",
+    "kategorie": "Product Type",
+ 
+    "verpackungsart": "Packaging Type",
+    "lieferform": "Packaging Type",
+    "verpackungsform": "Packaging Type",
+    "gurtung": "Packaging Type",
+    "bandware": "Packaging Type",
+ 
+    "normen/zulassungen": "Standards / Approvals",
+    "normen / zulassungen": "Standards / Approvals",
+    "zulassungen": "Standards / Approvals",
+    "normen": "Standards / Approvals",
+    "zertifizierungen": "Standards / Approvals",
+    "zertifikate": "Standards / Approvals",
+    "konformität": "Standards / Approvals",
+    "konformitaet": "Standards / Approvals",
+ 
+    "automobilstandard": "Automotive Qualification",
+    "automotive qualifiziert": "Automotive Qualification",
+    "aec-q qualifiziert": "Automotive Qualification",
+    "automobiltauglich": "Automotive Qualification",
+    "kfz-qualifiziert": "Automotive Qualification",
+ 
+    "anschlussdurchmesser": "Lead Diameter",
+    "drahtdurchmesser": "Lead Diameter",
+    "anschlussdrahtdurchmesser": "Lead Diameter",
+    "beindurchmesser": "Lead Diameter",
+ 
+    "serie": "Series",
+    "produktserie": "Series",
+    "produktfamilie": "Series",
+    "baureihe": "Series",
+ 
+    "hersteller": "Manufacturer",
+    "herstellername": "Manufacturer",
+    "marke": "Manufacturer",
+ 
+    "herstellernummer": "Manufacturer Part Number",
+    "hersteller-teilenummer": "Manufacturer Part Number",
+    "hersteller-artikelnummer": "Manufacturer Part Number",
+    "mpn": "Manufacturer Part Number",
+ 
+    "lebenszyklusstatus": "Lifecycle Status",
+    "produktstatus": "Lifecycle Status",
+    "verfügbarkeitsstatus": "Lifecycle Status",
+    "verfuegbarkeitsstatus": "Lifecycle Status",
+ 
+    "mindestbestellmenge": "Minimum Order Quantity",
+    "mindestabnahmemenge": "Minimum Order Quantity",
+    "mbm": "Minimum Order Quantity",
+    "moq": "Minimum Order Quantity",
+ 
+    "verpackungseinheit": "Order Multiple",
+    "staffelmenge": "Order Multiple",
+    "bestellmengenvielfaches": "Order Multiple",
+ 
+    "lieferzeit": "Lead Time",
+    "lieferfrist": "Lead Time",
+ 
+    "datenblatt": "Datasheet URL",
+    "datenblatt-url": "Datasheet URL",
+    "datenblattlink": "Datasheet URL",
+ 
+    "produktbeschreibung": "Part Description",
+    "artikelbeschreibung": "Part Description",
+    "beschreibung": "Part Description",
+ 
+    "verfügbarkeit": "Availability",
+    "verfuegbarkeit": "Availability",
+    "lagerbestand": "Availability",
+    "bestand": "Availability",
+    "vorrätig": "Availability",
+    "vorraetig": "Availability",
 }
 
 # -----------------------------------------------------------------------------
@@ -236,6 +949,11 @@ def get_category_tree() -> List[Dict]:
                     "level": (
                         cat.level if hasattr(cat, "level") else len(path_parts) - 1
                     ),
+                    # Expose structural flag so callers never assign parts to
+                    # structural (group-header) categories.
+                    "structural": bool(getattr(cat, "structural", False)),
+                    # Keep a reference for child-descent resolution
+                    "_parent_id": cat.parent_id,
                 }
             )
 
@@ -255,10 +973,18 @@ def clear_cache():
 
 
 def get_all_categories_for_ui() -> List[Dict]:
-    """Return all categories formatted for dropdown/select UI."""
+    """Return all categories formatted for dropdown/select UI.
+
+    Each entry includes a ``structural`` boolean so the frontend can render
+    structural (group-header) categories as disabled non-selectable options.
+    """
     categories = get_category_tree()
     return [
-        {"id": c["id"], "name": c["full_path"]}
+        {
+            "id": c["id"],
+            "name": c["full_path"],
+            "structural": c.get("structural", False),
+        }
         for c in sorted(categories, key=lambda x: x["full_path"])
     ]
 
@@ -309,7 +1035,7 @@ def build_synonym_table(user_synonyms_json: str = "") -> Dict[str, str]:
 #  Tokenisation
 # -----------------------------------------------------------------------------
 
-_SEP_RE = re.compile(r"[>\\/|,_\-&+\s]+")
+_SEP_RE = re.compile(r"[>\\/|,_\-–—&+()\[\]\s]+")
 
 # Multi-stage noise strippers applied to distributor category strings
 # before tokenisation. Each regex removes a class of noise.
@@ -553,6 +1279,30 @@ def fuzzy_match_category(
             best_match = cat
 
     if best_match and best_score >= threshold:
+        # ── Structural category guard ────────────────────────────────────────
+        # InvenTree forbids assigning parts to structural categories.  If the
+        # best match is structural, attempt to descend into a non-structural
+        # child; if that fails, force manual selection (return None).
+        if best_match.get("structural"):
+            resolved = _resolve_non_structural_child(
+                best_match, categories, synonyms,
+                dist_tokens_flat, dist_leaf_tokens, threshold
+            )
+            if resolved:
+                logger.info(
+                    f"Category: structural '{best_match['full_path']}' resolved to "
+                    f"non-structural child '{resolved['full_path']}' "
+                    f"(score: {best_score:.1f})"
+                )
+                return (resolved["id"], resolved["full_path"], int(best_score))
+            else:
+                logger.info(
+                    f"Category match landed on structural '{best_match['full_path']}' "
+                    f"(score: {best_score:.1f}) – no non-structural child resolved; "
+                    f"forcing manual selection."
+                )
+                return (None, "", 0)
+
         logger.info(
             f"Category match: '{distributor_category}' --- "
             f"'{best_match['full_path']}' (score: {best_score:.1f})"
@@ -569,6 +1319,95 @@ def fuzzy_match_category(
 # -----------------------------------------------------------------------------
 #  Helpers
 # -----------------------------------------------------------------------------
+
+
+def _resolve_non_structural_child(
+    structural_cat: Dict,
+    all_categories: List[Dict],
+    synonyms: Dict[str, str],
+    dist_tokens_flat: List[str],
+    dist_leaf_tokens: List[str],
+    threshold: int,
+) -> Optional[Dict]:
+    """
+    Attempt to descend from a structural parent category into its best-matching
+    non-structural child using distributor token signals.
+
+    The scoring uses a relaxed threshold (``threshold // 2``, minimum 20) so
+    that even a moderately confident signal can disambiguate mounting type or
+    sub-family (e.g. "SMD" vs "Through-Hole" when the distributor says "SMD").
+
+    Args:
+        structural_cat:    The structural category dict from the cache.
+        all_categories:    Full flat category list from ``get_category_tree()``.
+        synonyms:          Merged synonym table.
+        dist_tokens_flat:  Flat distributor token list.
+        dist_leaf_tokens:  Leaf-only distributor token list.
+        threshold:         Original match threshold (used to derive relaxed value).
+
+    Returns:
+        Best matching non-structural child dict, or ``None`` if no confident
+        child can be identified.
+    """
+    parent_id = structural_cat["id"]
+    relaxed = max(threshold // 2, 20)
+
+    # Direct children of the structural category that are themselves not structural
+    children = [
+        c for c in all_categories
+        if c.get("_parent_id") == parent_id and not c.get("structural", False)
+    ]
+
+    if not children:
+        return None
+
+    best_score = 0.0
+    best_child = None
+
+    for child in children:
+        inv_parts = child["path_parts"]
+        inv_tokens_flat = _tokenise(" ".join(inv_parts), synonyms)
+        inv_leaf_tokens = _tokenise(inv_parts[-1] if inv_parts else child["name"], synonyms)
+
+        sig_path = _dice(dist_tokens_flat, inv_tokens_flat)
+        sig_leaf = _dice(dist_leaf_tokens, inv_leaf_tokens)
+
+        # Simplified 2-signal score: path + leaf-direct (no leaf-weight needed
+        # since we are already scoped to children of the structural parent)
+        dl = set(dist_leaf_tokens)
+        il = set(inv_leaf_tokens)
+        prefix_bonus = 0.0
+        if dl and il:
+            if dl.issubset(il) or il.issubset(dl):
+                prefix_bonus = 1.0
+            elif dl & il:
+                prefix_bonus = len(dl & il) / max(len(dl), len(il))
+
+        score = (0.50 * sig_path + 0.35 * sig_leaf + 0.15 * prefix_bonus) * 100.0
+
+        if score > best_score:
+            best_score = score
+            best_child = child
+
+    if best_child and best_score >= relaxed:
+        logger.debug(
+            "_resolve_non_structural_child: '%s' -> '%s' (score %.1f >= relaxed %d)",
+            structural_cat["full_path"],
+            best_child["full_path"],
+            best_score,
+            relaxed,
+        )
+        return best_child
+
+    logger.debug(
+        "_resolve_non_structural_child: no confident child for '%s' "
+        "(best %.1f < relaxed %d, children: %s)",
+        structural_cat["full_path"],
+        best_score,
+        relaxed,
+        [c["name"] for c in children],
+    )
+    return None
 
 
 def _get_default_category(name: str) -> Tuple[Optional[int], str, int]:

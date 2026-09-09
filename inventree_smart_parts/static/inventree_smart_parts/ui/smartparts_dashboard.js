@@ -5,6 +5,8 @@
  * Provides a mini MPN search form that redirects to the full plugin.
  */
 
+import './scanner_global.js';
+
 export function renderSmartPartsDashboard(target, context) {
     if (!target) return;
 

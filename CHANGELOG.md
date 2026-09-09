@@ -2,6 +2,33 @@
 
 All notable changes to SmartParts are documented in this file.
 
+## [1.2.0] — 2026-09-09
+
+### Added
+- **Category Parameter Whitelist & Inheritance Engine (`LIMIT_PARAMETERS_TO_CATEGORY`)**:
+  - Gated incoming distributor parameters to valid InvenTree `ParameterTemplate` definitions in the chosen category.
+  - Recursive ancestor category template inheritance (from leaf up to root).
+  - Child-over-parent precedence (deepest leaf definition takes priority over parent categories).
+  - Structural category rejection with atomic transaction rollback (`structural=True` rejected with HTTP 400).
+  - Dropped parameter audit trail (`dropped_parameters`) in dry-run previews, full API responses, and Live Editor UI.
+- **SI Unit Normalization & Engineering Shorthand**:
+  - Canonical normalization for capacitance, resistance, inductance, voltage, current, power, frequency, and temperature.
+  - Engineering shorthand parser (e.g. `4k7` $\rightarrow$ `4.7 kΩ`, `2R2` $\rightarrow$ `2.2 Ω`, `1M0` $\rightarrow$ `1.0 MΩ`).
+  - Multiplier scaling into standard engineering $[1, 1000)$ range and sentinel empty value stripping (`-`, `N/A`, `unknown`, `tbd`).
+- **Global Hardware Barcode Scanner Wedge (`scanner_global.js`)**:
+  - Universal capture-phase keystroke listener for USB/Bluetooth HID scanners (<50ms inter-key duration, $\ge 80\%$ fast transitions, $\ge 4$ characters).
+  - Active input element value restoration to prevent high-speed keystrokes from corrupting focused text fields.
+  - Native InvenTree QR & DataMatrix barcode discrimination: routes directly to stock locations, stock items, internal parts, purchase orders, build orders, sales orders, return orders, and supplier parts without import prompts.
+  - Context-aware modal suppression on SmartParts UI (`isSmartPartsActive()`): scans on dashboard or embedded panels suppress global modals and auto-forward directly to panel search.
+  - Clean coexistence with dedicated PureScan kiosk terminal.
+- **Token-Authenticated REST API**:
+  - Single-shot import endpoint (`POST /plugin/smartparts/api/v1/import/`) with token authentication (`Authorization: Token <key>`).
+  - Barcode classification endpoint (`POST /plugin/smartparts/api/barcode/lookup/`).
+  - Category parameter whitelist endpoint (`GET/POST /plugin/smartparts/api/category/parameters/`).
+  - Raw distributor diagnostic endpoint (`POST /plugin/smartparts/api/v1/raw-lookup/`).
+- **Official Documentation Wiki**:
+  - Comprehensive documentation covering hardware barcode scanner configuration, parameter engine inheritance rules, and REST API reference in `./wiki/`.
+
 ## [1.1.1] — 2026-08-10
 
 ### Fixed
